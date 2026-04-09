@@ -29,14 +29,22 @@
             color: var(--text);
             display: flex; flex-direction: column;
             transition: background-color 0.3s;
-            padding-top: 60px; /* Offset for fixed header */
+            padding-top: 60px; 
         }
 
-        /* --- BACKGROUND LAYERS --- */
+        /* --- BACKGROUND LAYERS WITH OVERSCAN FIX --- */
         #video-bg, #image-bg {
-            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-            object-fit: cover; z-index: -2; pointer-events: none;
+            position: fixed; 
+            top: 0; 
+            left: 0; 
+            width: 100vw; 
+            height: 115vh; /* Taller than screen to hide URL bar gaps */
+            object-fit: cover; 
+            z-index: -2; 
+            pointer-events: none;
             will-change: transform;
+            /* Shift up slightly to center the overscan */
+            transform: translateY(-7.5%); 
         }
         #video-bg { display: none; z-index: -1; }
         #image-bg { background-size: cover; background-position: center; }
@@ -144,7 +152,8 @@
 
     // --- MOBILE VIEWPORT LOCK ---
     function lockBackgroundHeight() {
-        const vh = window.innerHeight;
+        // Lock height to 115% of current innerHeight to cover URL bar hiding
+        const vh = window.innerHeight * 1.15;
         imageBg.style.height = vh + 'px';
         videoBg.style.height = vh + 'px';
     }
