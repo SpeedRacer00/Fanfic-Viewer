@@ -9,7 +9,7 @@
 
 ---
 
-### [Launch Fanfic Viewer](YOUR_GITHUB_PAGES_URL_HERE)
+### [Launch Fanfic Viewer](file:///C:/Users/knigh/Desktop/viewer.html)
 
 </div>
 
