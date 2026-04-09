@@ -3,125 +3,273 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fanfic Chat Viewer</title>
+    <title>Fanfic Viewer</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/4.3.0/marked.min.js"></script>
     <style>
+        /* --- THEME DEFINITIONS --- */
+        :root {
+            --bg: #1b2838; --header: #171a21; --border: #2a475e; --text: #dcdedc;
+            --user-bg: #2a475e; --user-text: #66c0f4; --ai-bg: #3d3d3d; --ai-text: #fff;
+            --header-text: #66c0f4;
+            --bubble-outline: 1px solid var(--border);
+        }
+        body.theme-discord { --bg: #313338; --header: #1e1f22; --border: #232428; --text: #dbdee1; --user-bg: #404249; --user-text: #dbdee1; --ai-bg: #2b2d31; --ai-text: #dbdee1; --header-text: #fff; --bubble-outline: 1px solid var(--border); }
+        body.theme-messenger { --bg: #000000; --header: #121212; --border: #222; --text: #fff; --user-bg: #0084ff; --user-text: #fff; --ai-bg: #242526; --ai-text: #fff; --header-text: #fff; --bubble-outline: none; }
+        body.theme-whatsapp { --bg: #0b141a; --header: #202c33; --border: #222d34; --text: #e9edef; --user-bg: #005c4b; --user-text: #e9edef; --ai-bg: #202c33; --ai-text: #e9edef; --header-text: #fff; --bubble-outline: none; }
+        body.theme-chatgpt { --bg: #212121; --header: #212121; --border: #3d3d3d; --text: #ececec; --user-bg: #2f2f2f; --user-text: #ececec; --ai-bg: transparent; --ai-text: #ececec; --header-text: #ececec; --bubble-outline: none; }
+        
+        body.theme-custom { --bubble-outline: none; }
+
+        html, body { margin: 0; padding: 0; min-height: 100vh; -ms-overflow-style: none; scrollbar-width: none; }
+        html::-webkit-scrollbar, body::-webkit-scrollbar { display: none; }
+
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #1b2838; /* Steam Dark Blue */
-            color: #dcdedc;
-            margin: 0;
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
+            background-color: var(--bg);
+            color: var(--text);
+            display: flex; flex-direction: column;
+            transition: background-color 0.3s;
         }
-        #drop-zone {
-            border: 2px dashed #66c0f4;
-            padding: 40px;
-            text-align: center;
-            margin: 20px;
-            border-radius: 10px;
-            cursor: pointer;
-            transition: background-color 0.3s, border-color 0.3s;
-            font-size: 1.2em;
+
+        #video-bg {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            object-fit: cover; z-index: -1; display: none;
         }
-        #drop-zone:hover {
-            background-color: rgba(102, 192, 244, 0.1);
-            border-color: #ffffff;
+        
+        #image-bg {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-size: cover; background-position: center;
+            background-attachment: fixed; z-index: -2;
         }
-        #chat-container {
-            flex: 1;
-            overflow-y: auto;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
+
+        header {
+            padding: 10px 20px; background: var(--header);
+            display: flex; justify-content: space-between; align-items: center;
+            border-bottom: 1px solid var(--border);
+            position: sticky; top: 0; z-index: 100; color: var(--header-text);
         }
+
+        #header-title { color: var(--header-text); font-weight: bold; }
+        .controls { display: flex; gap: 8px; align-items: center; }
+        
+        select, .btn-ui, .icon-btn { 
+            background: #444; color: #fff; border: 1px solid #666; 
+            padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; 
+        }
+        .icon-btn { font-size: 16px; padding: 3px 8px; display: none; }
+        .save-btn { background: #28a745; border-color: #1e7e34; margin-left: 10px; }
+
+        #custom-panel {
+            display: none; background: var(--header); padding: 12px 20px;
+            border-bottom: 1px solid var(--border); gap: 15px; align-items: center; 
+            font-size: 11px; color: var(--header-text); flex-wrap: wrap;
+            position: sticky; top: 45px; z-index: 99;
+        }
+        .color-group { display: flex; align-items: center; gap: 5px; }
+        input[type="color"] { border: none; width: 22px; height: 22px; cursor: pointer; background: none; padding: 0; }
+        .img-upload { font-size: 10px; background: #333; border: 1px solid #555; color: #ccc; border-radius: 3px; max-width: 140px; }
+
+        #chat-container { flex: 1; padding: 20px; display: flex; flex-direction: column; gap: 15px; max-width: 900px; margin: 0 auto; width: calc(100% - 40px); }
+
         .bubble {
-            max-width: 85%;
-            padding: 12px 16px;
-            border-radius: 15px;
-            line-height: 1.6;
-            position: relative;
-            word-wrap: break-word;
+            max-width: 85%; padding: 15px; border-radius: 18px; line-height: 1.6;
+            word-wrap: break-word; box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+            background: var(--ai-bg); color: var(--ai-text);
+            backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+            border: var(--bubble-outline);
         }
-        /* User/Prompt Bubble */
-        .user {
-            align-self: flex-end;
-            background-color: #2a475e;
-            color: #66c0f4;
-            border-bottom-right-radius: 2px;
-        }
-        /* AI/Response Bubble */
-        .ai {
-            align-self: flex-start;
-            background-color: #3d3d3d;
-            color: #ffffff;
-            border-bottom-left-radius: 2px;
-            border: 1px solid #4e4e4e;
-        }
-        .label {
-            font-size: 0.75em;
-            text-transform: uppercase;
-            margin-bottom: 8px;
-            display: block;
-            font-weight: bold;
-            opacity: 0.6;
-        }
-        p { margin: 5px 0; }
-        code { background: rgba(0,0,0,0.3); padding: 2px 4px; border-radius: 4px; }
-        pre { background: #000; padding: 10px; border-radius: 5px; overflow-x: auto; }
+        .user { align-self: flex-end; background: var(--user-bg); color: var(--user-text); border-bottom-right-radius: 4px; border: none !important; }
+        .ai { align-self: flex-start; border-bottom-left-radius: 4px; }
+        
+        .label { font-size: 0.7em; text-transform: uppercase; margin-bottom: 8px; display: block; font-weight: bold; opacity: 0.7; }
+        #drop-zone { border: 2px dashed #66c0f4; padding: 60px 20px; text-align: center; margin: 40px auto; width: 80%; max-width: 600px; border-radius: 10px; cursor: pointer; background: rgba(0,0,0,0.4); z-index: 10; position: relative; }
     </style>
 </head>
-<body>
+<body id="main-body">
 
-<div id="drop-zone">Click or drop your file here.</div>
+<div id="image-bg"></div>
+<video id="video-bg" autoplay loop muted playsinline></video>
+
+<header>
+    <span id="header-title">Fanfic Viewer</span>
+    <div class="controls">
+        <button id="toggle-custom" class="icon-btn">⚙️</button>
+        <select id="theme-select">
+            <option value="default">Steam Blue</option>
+            <option value="theme-chatgpt">ChatGPT</option>
+            <option value="theme-discord">Discord</option>
+            <option value="theme-messenger">Messenger</option>
+            <option value="theme-whatsapp">WhatsApp</option>
+            <option value="custom">Custom</option>
+        </select>
+        <button id="reset-page" class="btn-ui" style="display:none;">New File</button>
+    </div>
+</header>
+
+<div id="custom-panel">
+    <div class="color-group"><label>Header:</label><input type="color" id="headerColor" value="#171a21"></div>
+    <div class="color-group"><label>BG Color:</label><input type="color" id="bgColor" value="#1b2838"></div>
+    <div class="color-group"><label>User:</label><input type="color" id="userColor" value="#2a475e"></div>
+    <div class="color-group"><label>AI:</label><input type="color" id="aiColor" value="#3d3d3d"></div>
+    <div class="color-group">
+        <label>Custom BG:</label>
+        <input type="file" id="bgUpload" accept="image/*,video/mp4" class="img-upload">
+    </div>
+    <button id="save-theme" class="btn-ui save-btn">Save Colors</button>
+</div>
+
+<div id="drop-zone">Click or drop your fanfic here.</div>
 <div id="chat-container"></div>
 
 <script>
+    const themeSelect = document.getElementById('theme-select');
+    const customPanel = document.getElementById('custom-panel');
+    const toggleBtn = document.getElementById('toggle-custom');
+    const body = document.getElementById('main-body');
+    const saveBtn = document.getElementById('save-theme');
+    const bgUpload = document.getElementById('bgUpload');
+    const videoBg = document.getElementById('video-bg');
+    const imageBg = document.getElementById('image-bg');
+    
+    let currentMedia = ""; 
+    let mediaType = ""; 
+
+    const pickers = {
+        header: document.getElementById('headerColor'),
+        bg: document.getElementById('bgColor'),
+        user: document.getElementById('userColor'),
+        ai: document.getElementById('aiColor')
+    };
+
+    function getBrightness(hexColor) {
+        const rgb = parseInt(hexColor.slice(1), 16);
+        return ((rgb >> 16 & 0xff) * 299 + (rgb >> 8 & 0xff) * 587 + (rgb & 0xff) * 114) / 1000;
+    }
+
+    function applyCustomMedia() {
+        body.style.setProperty('--header', pickers.header.value);
+        body.style.setProperty('--bg', pickers.bg.value);
+        body.style.setProperty('--user-bg', pickers.user.value);
+        body.style.setProperty('--ai-bg', pickers.ai.value);
+
+        videoBg.style.display = "none";
+        imageBg.style.backgroundImage = "none";
+
+        if (mediaType === "video") {
+            videoBg.src = currentMedia;
+            videoBg.style.display = "block";
+            videoBg.play();
+        } else if (mediaType === "image") {
+            imageBg.style.backgroundImage = `url('${currentMedia}')`;
+        }
+
+        body.style.setProperty('--header-text', getBrightness(pickers.header.value) > 155 ? "#111" : "#66c0f4");
+        body.style.setProperty('--user-text', getBrightness(pickers.user.value) > 155 ? "#111" : "#fff");
+        body.style.setProperty('--ai-text', getBrightness(pickers.ai.value) > 155 ? "#111" : "#fff");
+    }
+
+    bgUpload.onchange = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        mediaType = file.type.startsWith("video") ? "video" : "image";
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            currentMedia = event.target.result;
+            applyCustomMedia();
+        };
+        reader.readAsDataURL(file);
+    };
+
+    saveBtn.onclick = () => {
+        const isPersistent = (mediaType === "image" && !currentMedia.startsWith("data:image/gif"));
+        const customTheme = {
+            header: pickers.header.value, bg: pickers.bg.value,
+            user: pickers.user.value, ai: pickers.ai.value,
+            lastMode: themeSelect.value,
+            savedImg: isPersistent ? currentMedia : null 
+        };
+        try {
+            localStorage.setItem('fanfic-custom-theme', JSON.stringify(customTheme));
+            alert(isPersistent ? 'Theme & Background saved!' : 'Colors saved! GIFs and Videos must be re-uploaded each session.');
+        } catch(e) { alert("File too large to save permanently!"); }
+    };
+
+    window.onload = () => {
+        const saved = localStorage.getItem('fanfic-custom-theme');
+        if (saved) {
+            const data = JSON.parse(saved);
+            Object.keys(pickers).forEach(key => { if(data[key]) pickers[key].value = data[key]; });
+            if (data.savedImg) { currentMedia = data.savedImg; mediaType = "image"; }
+            if (data.lastMode === 'custom') {
+                themeSelect.value = 'custom';
+                toggleBtn.style.display = 'flex';
+                body.classList.add('theme-custom');
+                applyCustomMedia();
+            }
+        }
+    };
+
+    toggleBtn.onclick = () => { customPanel.style.display = (customPanel.style.display === 'flex') ? 'none' : 'flex'; };
+    
+    themeSelect.onchange = () => {
+        body.classList.remove('theme-custom');
+        videoBg.style.display = "none";
+        imageBg.style.backgroundImage = "none";
+        if (themeSelect.value === 'custom') {
+            toggleBtn.style.display = 'flex';
+            customPanel.style.display = 'flex';
+            body.classList.add('theme-custom');
+            applyCustomMedia();
+        } else {
+            toggleBtn.style.display = 'none';
+            customPanel.style.display = 'none';
+            body.className = themeSelect.value === 'default' ? '' : themeSelect.value;
+            ['--header', '--bg', '--user-bg', '--ai-bg', '--header-text', '--user-text', '--ai-text'].forEach(prop => body.style.removeProperty(prop));
+        }
+    };
+
+    Object.values(pickers).forEach(p => p.oninput = applyCustomMedia);
+
+    // Standard Loading Logic
     const dropZone = document.getElementById('drop-zone');
     const container = document.getElementById('chat-container');
+    const resetBtn = document.getElementById('reset-page');
 
     dropZone.onclick = () => {
         const input = document.createElement('input');
-        input.type = 'file';
-        input.accept = ".md,.txt";
+        input.type = 'file'; input.accept = ".md,.txt";
         input.onchange = e => handleFile(e.target.files[0]);
         input.click();
     };
-
-    dropZone.ondragover = (e) => { e.preventDefault(); };
-    dropZone.ondrop = (e) => {
-        e.preventDefault();
-        handleFile(e.dataTransfer.files[0]);
-    };
+    resetBtn.onclick = () => location.reload();
+    window.ondragover = (e) => e.preventDefault();
+    window.ondrop = (e) => { e.preventDefault(); handleFile(e.dataTransfer.files[0]); };
 
     function handleFile(file) {
         if (!file) return;
         const reader = new FileReader();
-        reader.onload = e => parseContent(e.target.result);
+        reader.onload = e => {
+            parseContent(e.target.result);
+            dropZone.style.display = 'none';
+            resetBtn.style.display = 'block';
+        };
         reader.readAsText(file);
-        dropZone.style.display = 'none';
     }
 
     function parseContent(text) {
         container.innerHTML = '';
         const segments = text.split(/(?=## Prompt|## Response)/g);
-
         segments.forEach(segment => {
             if (!segment.trim()) return;
             const isPrompt = segment.includes('## Prompt');
-            const typeClass = isPrompt ? 'user' : 'ai';
-            const labelText = isPrompt ? 'User' : 'ChatGPT';
-            const cleanText = segment.replace(/## Prompt|## Response/g, '').trim();
-
             const div = document.createElement('div');
-            div.className = `bubble ${typeClass}`;
-            div.innerHTML = `<span class="label">${labelText}</span>` + marked.parse(cleanText);
+            div.className = `bubble ${isPrompt ? 'user' : 'ai'}`;
+            const cleanText = segment.replace(/## Prompt|## Response/g, '').trim();
+            div.innerHTML = `<span class="label">${isPrompt ? 'User' : 'ChatGPT'}</span>` + marked.parse(cleanText);
             container.appendChild(div);
         });
+        window.scrollTo(0,0);
     }
 </script>
-
 </body>
 </html>
