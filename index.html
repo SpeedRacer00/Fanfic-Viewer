@@ -47,26 +47,39 @@
 
         header {
             position: fixed; top: 0; left: 0; width: 100%; height: 60px;
-            padding: 0 15px; background: var(--header);
+            padding: 0 12px; background: var(--header);
             display: flex; justify-content: space-between; align-items: center;
             border-bottom: 1px solid var(--border);
             z-index: 9999; color: var(--header-text);
             box-sizing: border-box;
+            gap: 10px;
         }
 
-        .header-left { display: flex; align-items: baseline; gap: 8px; overflow: hidden; }
-        #header-title { font-weight: bold; white-space: nowrap; }
+        .header-left { 
+            display: flex; 
+            align-items: baseline; 
+            gap: 6px; 
+            overflow: hidden; 
+            flex: 1; /* Take up all space except what buttons need */
+        }
+        
+        #header-title { font-weight: bold; white-space: nowrap; flex-shrink: 0; }
+        
         #file-name-display { 
-            font-size: 0.75em; opacity: 0.6; font-weight: normal; 
-            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; 
-            max-width: 150px; /* Limits width so it doesn't push buttons off screen */
+            font-size: 0.8em; 
+            opacity: 0.6; 
+            font-weight: normal; 
+            white-space: nowrap; 
+            overflow: hidden; 
+            text-overflow: ellipsis; 
+            min-width: 0; /* Allows ellipsis to work in flexbox */
         }
 
-        .controls { display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
+        .controls { display: flex; gap: 5px; align-items: center; flex-shrink: 0; }
         
         select, .btn-ui { 
             background: #444; color: #fff; border: 1px solid #666; 
-            padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 11px; 
+            padding: 4px 6px; border-radius: 4px; cursor: pointer; font-size: 11px; 
         }
 
         #custom-panel {
@@ -262,7 +275,8 @@
 
     function handleFile(file) {
         if (!file) return;
-        fileNameDisplay.textContent = `— ${file.name}`; // Update filename display
+        // Strip .txt or .md for a cleaner look if you want, but this shows full name:
+        fileNameDisplay.textContent = `— ${file.name}`; 
         const reader = new FileReader();
         reader.onload = e => {
             parseContent(e.target.result);
