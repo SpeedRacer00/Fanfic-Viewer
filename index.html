@@ -35,7 +35,6 @@
             -webkit-overflow-scrolling: touch;
         }
 
-        /* --- BACKGROUND LAYER --- */
         #fixed-bg-layer {
             position: fixed; top: -10vh; left: 0; width: 100vw; height: 125vh;
             z-index: -10; background-color: var(--bg); pointer-events: none;
@@ -51,41 +50,19 @@
             display: flex; justify-content: space-between; align-items: center;
             border-bottom: 1px solid var(--border);
             z-index: 9999; color: var(--header-text);
-            box-sizing: border-box;
-            gap: 10px;
+            box-sizing: border-box; gap: 10px;
         }
 
-        .header-left { 
-            display: flex; 
-            align-items: baseline; 
-            gap: 6px; 
-            overflow: hidden; 
-            flex: 1; /* Take up all space except what buttons need */
-        }
-        
+        .header-left { display: flex; align-items: baseline; gap: 6px; overflow: hidden; flex: 1; }
         #header-title { font-weight: bold; white-space: nowrap; flex-shrink: 0; }
-        
-        #file-name-display { 
-            font-size: 0.8em; 
-            opacity: 0.6; 
-            font-weight: normal; 
-            white-space: nowrap; 
-            overflow: hidden; 
-            text-overflow: ellipsis; 
-            min-width: 0; /* Allows ellipsis to work in flexbox */
-        }
+        #file-name-display { font-size: 0.8em; opacity: 0.6; font-weight: normal; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 
         .controls { display: flex; gap: 5px; align-items: center; flex-shrink: 0; }
-        
-        select, .btn-ui { 
-            background: #444; color: #fff; border: 1px solid #666; 
-            padding: 4px 6px; border-radius: 4px; cursor: pointer; font-size: 11px; 
-        }
+        select, .btn-ui { background: #444; color: #fff; border: 1px solid #666; padding: 4px 6px; border-radius: 4px; cursor: pointer; font-size: 11px; }
 
         #custom-panel {
             display: none; background: var(--header); padding: 10px 15px;
-            border-bottom: 1px solid var(--border); 
-            gap: 12px; align-items: center; justify-content: center;
+            border-bottom: 1px solid var(--border); gap: 12px; align-items: center; justify-content: center;
             font-size: 10px; color: var(--header-text); flex-wrap: wrap;
             position: fixed; top: 60px; left: 0; width: 100%; z-index: 9998;
             box-sizing: border-box;
@@ -161,9 +138,13 @@
     const videoBg = document.getElementById('video-bg');
     const imageBg = document.getElementById('image-bg');
     const bgLayer = document.getElementById('fixed-bg-layer');
-    
+    const container = document.getElementById('chat-container');
+    const dropZone = document.getElementById('drop-zone');
+    const resetBtn = document.getElementById('reset-page');
+
     let currentMedia = ""; 
     let mediaType = ""; 
+    let currentFileName = "";
 
     const pickers = {
         header: document.getElementById('headerColor'),
@@ -172,10 +153,12 @@
         ai: document.getElementById('aiColor')
     };
 
-    function getBrightness(hexColor) {
-        const rgb = parseInt(hexColor.slice(1), 16);
-        return ((rgb >> 16 & 0xff) * 299 + (rgb >> 8 & 0xff) * 587 + (rgb & 0xff) * 114) / 1000;
-    }
+    // --- SCROLL MEMORY LOGIC ---
+    body.addEventListener('scroll', () => {
+        if (currentFileName) {
+            localStorage.setItem('scrollPos_' + currentFileName, body.scrollTop);
+        }
+    });
 
     function applyCustomMedia() {
         body.style.setProperty('--header', pickers.header.value);
@@ -192,9 +175,6 @@
         } else if (mediaType === "image") {
             imageBg.style.backgroundImage = `url('${currentMedia}')`;
         }
-        body.style.setProperty('--header-text', getBrightness(pickers.header.value) > 155 ? "#111" : "#66c0f4");
-        body.style.setProperty('--user-text', getBrightness(pickers.user.value) > 155 ? "#111" : "#fff");
-        body.style.setProperty('--ai-text', getBrightness(pickers.ai.value) > 155 ? "#111" : "#fff");
     }
 
     bgUpload.onchange = (e) => {
@@ -233,14 +213,29 @@
                 applyCustomMedia();
             }
         }
+        
+        // Auto-load last file if stored (Session persistence)
+        const lastContent = localStorage.getItem('last_file_content');
+        const lastFile = localStorage.getItem('last_file_name');
+        if (lastContent && lastFile) {
+            currentFileName = lastFile;
+            fileNameDisplay.textContent = `— ${lastFile}`;
+            parseContent(lastContent);
+            dropZone.style.display = 'none';
+            resetBtn.style.display = 'block';
+            
+            // Restore scroll position after content renders
+            setTimeout(() => {
+                const savedScroll = localStorage.getItem('scrollPos_' + lastFile);
+                if (savedScroll) body.scrollTo(0, parseInt(savedScroll));
+            }, 100);
+        }
     };
 
     toggleBtn.onclick = () => { customPanel.style.display = (customPanel.style.display === 'flex') ? 'none' : 'flex'; };
     
     themeSelect.onchange = () => {
         body.classList.remove('theme-custom');
-        videoBg.style.display = "none";
-        imageBg.style.backgroundImage = "none";
         if (themeSelect.value === 'custom') {
             toggleBtn.style.display = 'block';
             customPanel.style.display = 'flex';
@@ -250,18 +245,8 @@
             toggleBtn.style.display = 'none';
             customPanel.style.display = 'none';
             body.className = themeSelect.value === 'default' ? '' : themeSelect.value;
-            ['--header', '--bg', '--user-bg', '--ai-bg', '--header-text', '--user-text', '--ai-text'].forEach(prop => {
-                body.style.removeProperty(prop);
-                bgLayer.style.removeProperty(prop);
-            });
         }
     };
-
-    Object.values(pickers).forEach(p => p.oninput = applyCustomMedia);
-
-    const dropZone = document.getElementById('drop-zone');
-    const container = document.getElementById('chat-container');
-    const resetBtn = document.getElementById('reset-page');
 
     dropZone.onclick = () => {
         const input = document.createElement('input');
@@ -269,17 +254,23 @@
         input.onchange = e => handleFile(e.target.files[0]);
         input.click();
     };
-    resetBtn.onclick = () => location.reload();
-    window.ondragover = (e) => e.preventDefault();
-    window.ondrop = (e) => { e.preventDefault(); handleFile(e.dataTransfer.files[0]); };
+
+    resetBtn.onclick = () => {
+        localStorage.removeItem('last_file_content');
+        localStorage.removeItem('last_file_name');
+        location.reload();
+    };
 
     function handleFile(file) {
         if (!file) return;
-        // Strip .txt or .md for a cleaner look if you want, but this shows full name:
+        currentFileName = file.name;
         fileNameDisplay.textContent = `— ${file.name}`; 
         const reader = new FileReader();
         reader.onload = e => {
-            parseContent(e.target.result);
+            const content = e.target.result;
+            localStorage.setItem('last_file_content', content);
+            localStorage.setItem('last_file_name', file.name);
+            parseContent(content);
             dropZone.style.display = 'none';
             resetBtn.style.display = 'block';
         };
@@ -298,7 +289,6 @@
             div.innerHTML = `<span class="label">${isPrompt ? 'User' : 'ChatGPT'}</span>` + marked.parse(cleanText);
             container.appendChild(div);
         });
-        window.scrollTo(0,0);
     }
 </script>
 </body>
