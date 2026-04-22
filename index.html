@@ -190,6 +190,8 @@
     };
 
     saveBtn.onclick = () => {
+        // Color fix: Apply changes immediately when saving
+        applyCustomMedia();
         const customTheme = {
             header: pickers.header.value, bg: pickers.bg.value,
             user: pickers.user.value, ai: pickers.ai.value,
@@ -279,13 +281,15 @@
 
     function parseContent(text) {
         container.innerHTML = '';
+        // Part 7 Fix: Split and replace handles headers with or without colons
         const segments = text.split(/(?=## Prompt|## Response)/g);
         segments.forEach(segment => {
             if (!segment.trim()) return;
             const isPrompt = segment.includes('## Prompt');
             const div = document.createElement('div');
             div.className = `bubble ${isPrompt ? 'user' : 'ai'}`;
-            const cleanText = segment.replace(/## Prompt|## Response/g, '').trim();
+            // Regex handles "## Prompt:" and "## Prompt" correctly
+            const cleanText = segment.replace(/## Prompt:?|## Response:?/g, '').trim();
             div.innerHTML = `<span class="label">${isPrompt ? 'User' : 'ChatGPT'}</span>` + marked.parse(cleanText);
             container.appendChild(div);
         });
