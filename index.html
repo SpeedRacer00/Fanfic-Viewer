@@ -153,7 +153,6 @@
         ai: document.getElementById('aiColor')
     };
 
-    // --- SCROLL MEMORY LOGIC ---
     body.addEventListener('scroll', () => {
         if (currentFileName) {
             localStorage.setItem('scrollPos_' + currentFileName, body.scrollTop);
@@ -214,7 +213,6 @@
             }
         }
         
-        // Auto-load last file if stored (Session persistence)
         const lastContent = localStorage.getItem('last_file_content');
         const lastFile = localStorage.getItem('last_file_name');
         if (lastContent && lastFile) {
@@ -224,7 +222,6 @@
             dropZone.style.display = 'none';
             resetBtn.style.display = 'block';
             
-            // Restore scroll position after content renders
             setTimeout(() => {
                 const savedScroll = localStorage.getItem('scrollPos_' + lastFile);
                 if (savedScroll) body.scrollTo(0, parseInt(savedScroll));
@@ -279,15 +276,39 @@
 
     function parseContent(text) {
         container.innerHTML = '';
-        const segments = text.split(/(?=## Prompt|## Response)/g);
-        segments.forEach(segment => {
-            if (!segment.trim()) return;
-            const isPrompt = segment.includes('## Prompt');
-            const div = document.createElement('div');
-            div.className = `bubble ${isPrompt ? 'user' : 'ai'}`;
-            const cleanText = segment.replace(/## Prompt|## Response/g, '').trim();
-            div.innerHTML = `<span class="label">${isPrompt ? 'User' : 'ChatGPT'}</span>` + marked.parse(cleanText);
-            container.appendChild(div);
+        
+        // This is a more robust way to capture pairs of Prompt/Response
+        // We look for the headers globally and case-insensitively.
+        const markerRegex = /##\s*(Prompt|Response):?/gi;
+        let match;
+        let positions = [];
+        
+        while ((match = markerRegex.exec(text)) !== null) {
+            positions.push({
+                type: match[1].toLowerCase(),
+                index: match.index,
+                fullMatch: match[0]
+            });
+        }
+
+        positions.forEach((pos, i) => {
+            const start = pos.index + pos.fullMatch.length;
+            const end = (i + 1 < positions.length) ? positions[i+1].index : text.length;
+            let content = text.substring(start, end).trim();
+            
+            // Cleanup exporter footer if it's the last block
+            if (i === positions.length - 1) {
+                content = content.split('---')[0].split('Powered by')[0].trim();
+            }
+
+            if (content) {
+                const isPrompt = (pos.type === 'prompt');
+                const div = document.createElement('div');
+                div.className = `bubble ${isPrompt ? 'user' : 'ai'}`;
+                const labelText = isPrompt ? 'Boss' : 'V';
+                div.innerHTML = `<span class="label">${labelText}</span>` + marked.parse(content);
+                container.appendChild(div);
+            }
         });
     }
 </script>
