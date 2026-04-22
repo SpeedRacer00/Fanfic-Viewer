@@ -153,7 +153,6 @@
         ai: document.getElementById('aiColor')
     };
 
-    // --- SCROLL MEMORY LOGIC ---
     body.addEventListener('scroll', () => {
         if (currentFileName) {
             localStorage.setItem('scrollPos_' + currentFileName, body.scrollTop);
@@ -190,7 +189,6 @@
     };
 
     saveBtn.onclick = () => {
-        // Color fix: Apply changes immediately when saving
         applyCustomMedia();
         const customTheme = {
             header: pickers.header.value, bg: pickers.bg.value,
@@ -279,15 +277,22 @@
 
     function parseContent(text) {
         container.innerHTML = '';
-        // Part 7 Fix: Updated regex to split segments including colons and cleanup headers properly
-        const segments = text.split(/(?=## Prompt|## Response)/g);
+        // FIX: Specifically handle the way "Part 7" is formatted by the exporter
+        const segments = text.split(/##\s+(?:Prompt|Response)/gi);
         segments.forEach(segment => {
-            if (!segment.trim()) return;
-            const isPrompt = segment.includes('## Prompt');
+            const trimmed = segment.trim();
+            if (trimmed.length < 5) return;
+
+            // Detect if this segment was originally a prompt or response
+            // (Since we split BY the header, we look at the start of the next text)
+            const isPrompt = text.toLowerCase().includes('prompt' + segment.toLowerCase().substring(0, 20));
+            
             const div = document.createElement('div');
             div.className = `bubble ${isPrompt ? 'user' : 'ai'}`;
-            // Remove headers even if they have colons (e.g. ## Prompt:)
-            const cleanText = segment.replace(/## Prompt:?|## Response:?/g, '').trim();
+            
+            // Cleanup colons and leading dates often found in exports
+            let cleanText = trimmed.replace(/^[:\s\d\/, :APM]+/, '').trim();
+            
             div.innerHTML = `<span class="label">${isPrompt ? 'User' : 'ChatGPT'}</span>` + marked.parse(cleanText);
             container.appendChild(div);
         });
