@@ -24,7 +24,7 @@
 
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: var(--bg); /* Set to variable so it changes with theme */
+            background-color: var(--bg);
             color: var(--text);
             margin: 0; padding: 0;
             display: flex; flex-direction: column;
@@ -73,7 +73,6 @@
 
         #chat-container { flex: 1; padding: 20px; display: flex; flex-direction: column; gap: 15px; max-width: 900px; margin: 0 auto; width: calc(100% - 40px); }
 
-        /* KEY FIX: Ensure these ALWAYS use the variables */
         .bubble {
             max-width: 85%; padding: 15px; border-radius: 18px; line-height: 1.6;
             word-wrap: break-word; box-shadow: 0 4px 20px rgba(0,0,0,0.5);
@@ -172,6 +171,8 @@
         bgLayer.style.setProperty('--bg', pickers.bg.value);
         body.style.setProperty('--user-bg', pickers.user.value);
         body.style.setProperty('--ai-bg', pickers.ai.value);
+        
+        // Handle media display
         videoBg.style.display = "none";
         imageBg.style.backgroundImage = "none";
         if (mediaType === "video") {
@@ -190,12 +191,15 @@
         const reader = new FileReader();
         reader.onload = (event) => {
             currentMedia = event.target.result;
-            applyCustomMedia();
+            applyCustomMedia(); // Updates colors instantly when file is chosen
         };
         reader.readAsDataURL(file);
     };
 
     saveBtn.onclick = () => {
+        // APPLY updates immediately when clicking Save
+        applyCustomMedia();
+
         const customTheme = {
             header: pickers.header.value, bg: pickers.bg.value,
             user: pickers.user.value, ai: pickers.ai.value,
@@ -203,7 +207,7 @@
             savedImg: (mediaType === "image" && !currentMedia.startsWith("data:image/gif")) ? currentMedia : null 
         };
         try { localStorage.setItem('fanfic-custom-theme', JSON.stringify(customTheme)); } catch(e){}
-        alert('Theme saved!');
+        alert('Theme applied and saved!');
     };
 
     window.onload = () => {
@@ -238,7 +242,6 @@
 
     toggleBtn.onclick = () => { customPanel.style.display = (customPanel.style.display === 'flex') ? 'none' : 'flex'; };
     
-    // FIX: Clear custom styles when switching back to presets
     themeSelect.onchange = () => {
         body.classList.remove('theme-custom');
         const props = ['--header', '--bg', '--user-bg', '--ai-bg', '--header-text', '--user-text', '--ai-text'];
@@ -252,7 +255,6 @@
             toggleBtn.style.display = 'none';
             customPanel.style.display = 'none';
             body.className = themeSelect.value === 'default' ? '' : themeSelect.value;
-            // Remove overrides so presets can work
             props.forEach(p => {
                 body.style.removeProperty(p);
                 bgLayer.style.removeProperty(p);
