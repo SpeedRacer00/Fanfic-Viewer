@@ -153,10 +153,9 @@
         ai: document.getElementById('aiColor')
     };
 
-    // --- SCROLL MEMORY LOGIC ---
     body.addEventListener('scroll', () => {
         if (currentFileName) {
-            localStorage.setItem('scrollPos_' + currentFileName, body.scrollTop);
+            try { localStorage.setItem('scrollPos_' + currentFileName, body.scrollTop); } catch(e) {}
         }
     });
 
@@ -190,14 +189,16 @@
     };
 
     saveBtn.onclick = () => {
-        const customTheme = {
-            header: pickers.header.value, bg: pickers.bg.value,
-            user: pickers.user.value, ai: pickers.ai.value,
-            lastMode: themeSelect.value,
-            savedImg: (mediaType === "image" && !currentMedia.startsWith("data:image/gif")) ? currentMedia : null 
-        };
-        localStorage.setItem('fanfic-custom-theme', JSON.stringify(customTheme));
-        alert('Theme saved!');
+        try {
+            const customTheme = {
+                header: pickers.header.value, bg: pickers.bg.value,
+                user: pickers.user.value, ai: pickers.ai.value,
+                lastMode: themeSelect.value,
+                savedImg: (mediaType === "image" && !currentMedia.startsWith("data:image/gif")) ? currentMedia : null 
+            };
+            localStorage.setItem('fanfic-custom-theme', JSON.stringify(customTheme));
+            alert('Theme saved!');
+        } catch(e) { alert("Storage full! Can't save theme."); }
     };
 
     window.onload = () => {
@@ -214,7 +215,6 @@
             }
         }
         
-        // Auto-load last file if stored (Session persistence)
         const lastContent = localStorage.getItem('last_file_content');
         const lastFile = localStorage.getItem('last_file_name');
         if (lastContent && lastFile) {
@@ -223,8 +223,6 @@
             parseContent(lastContent);
             dropZone.style.display = 'none';
             resetBtn.style.display = 'block';
-            
-            // Restore scroll position after content renders
             setTimeout(() => {
                 const savedScroll = localStorage.getItem('scrollPos_' + lastFile);
                 if (savedScroll) body.scrollTo(0, parseInt(savedScroll));
@@ -268,8 +266,10 @@
         const reader = new FileReader();
         reader.onload = e => {
             const content = e.target.result;
-            localStorage.setItem('last_file_content', content);
-            localStorage.setItem('last_file_name', file.name);
+            try {
+                localStorage.setItem('last_file_content', content);
+                localStorage.setItem('last_file_name', file.name);
+            } catch(err) { console.warn("File too big to save to storage, but it will still display."); }
             parseContent(content);
             dropZone.style.display = 'none';
             resetBtn.style.display = 'block';
@@ -279,16 +279,28 @@
 
     function parseContent(text) {
         container.innerHTML = '';
-        const segments = text.split(/(?=## Prompt|## Response)/g);
-        segments.forEach(segment => {
-            if (!segment.trim()) return;
-            const isPrompt = segment.includes('## Prompt');
-            const div = document.createElement('div');
-            div.className = `bubble ${isPrompt ? 'user' : 'ai'}`;
-            const cleanText = segment.replace(/## Prompt|## Response/g, '').trim();
-            div.innerHTML = `<span class="label">${isPrompt ? 'User' : 'ChatGPT'}</span>` + marked.parse(cleanText);
-            container.appendChild(div);
-        });
+        const parts = text.split(/##\s*(Prompt|Response):?/gi);
+        for (let i = 1; i < parts.length; i += 2) {
+            const type = parts[i].toLowerCase();
+            let content = parts[i + 1] || "";
+            content = content.replace(/^\d{1,2}\/\d{1,2}\/\d{4}.*?\n/i, '');
+            if (i + 2 >= parts.length) {
+                content = content.split('---')[0].split('Powered by')[0].split('Something went wrong')[0].trim();
+            }
+            if (content.trim()) {
+                const isUser = (type === 'prompt');
+                const div = document.createElement('div');
+                div.className = `bubble ${isUser ? 'user' : 'ai'}`;
+                const label = document.createElement('span');
+                label.className = 'label';
+                label.innerText = isUser ? 'User' : 'ChatGPT';
+                const textBody = document.createElement('div');
+                textBody.innerHTML = marked.parse(content.trim());
+                div.appendChild(label);
+                div.appendChild(textBody);
+                container.appendChild(div);
+            }
+        }
     }
 </script>
 </body>
