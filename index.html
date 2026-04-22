@@ -277,36 +277,47 @@
     function parseContent(text) {
         container.innerHTML = '';
         
-        // This is a more robust way to capture pairs of Prompt/Response
-        // We look for the headers globally and case-insensitively.
-        const markerRegex = /##\s*(Prompt|Response):?/gi;
+        // Find all "## Prompt" or "## Response" markers (case insensitive)
+        const regex = /##\s*(Prompt|Response)\b/gi;
+        const matches = [];
         let match;
-        let positions = [];
         
-        while ((match = markerRegex.exec(text)) !== null) {
-            positions.push({
+        while ((match = regex.exec(text)) !== null) {
+            matches.push({
                 type: match[1].toLowerCase(),
-                index: match.index,
-                fullMatch: match[0]
+                start: match.index,
+                contentStart: match.index + match[0].length
             });
         }
 
-        positions.forEach((pos, i) => {
-            const start = pos.index + pos.fullMatch.length;
-            const end = (i + 1 < positions.length) ? positions[i+1].index : text.length;
-            let content = text.substring(start, end).trim();
-            
-            // Cleanup exporter footer if it's the last block
-            if (i === positions.length - 1) {
-                content = content.split('---')[0].split('Powered by')[0].trim();
+        if (matches.length === 0) {
+            console.error("No chat markers found.");
+            return;
+        }
+
+        matches.forEach((m, index) => {
+            // Content goes from the end of the marker to the start of the next marker
+            const end = (index + 1 < matches.length) ? matches[index + 1].start : text.length;
+            let rawContent = text.substring(m.contentStart, end).trim();
+
+            // Clean up timestamps often found at the top of exporter prompts
+            // Example: "10/20/2025, 7:37:13 AM"
+            rawContent = rawContent.replace(/^\d{1,2}\/\d{1,2}\/\d{4},\s*\d{1,2}:\d{2}:\d{2}\s*(AM|PM)\n*/i, '');
+
+            // Clean up exporter footer on the very last block
+            if (index === matches.length - 1) {
+                rawContent = rawContent.split('---')[0].split('Powered by')[0].trim();
             }
 
-            if (content) {
-                const isPrompt = (pos.type === 'prompt');
+            if (rawContent) {
+                const isPrompt = (m.type === 'prompt');
                 const div = document.createElement('div');
                 div.className = `bubble ${isPrompt ? 'user' : 'ai'}`;
-                const labelText = isPrompt ? 'Boss' : 'V';
-                div.innerHTML = `<span class="label">${labelText}</span>` + marked.parse(content);
+                
+                // Set labels as requested
+                const labelText = isPrompt ? 'User' : 'ChatGPT';
+                
+                div.innerHTML = `<span class="label">${labelText}</span>` + marked.parse(rawContent);
                 container.appendChild(div);
             }
         });
