@@ -58,7 +58,6 @@
         .controls { display: flex; gap: 5px; align-items: center; }
         select, .btn-ui { background: #444; color: #fff; border: 1px solid #666; padding: 4px 6px; border-radius: 4px; cursor: pointer; font-size: 11px; }
 
-        /* --- COMPACT PANEL --- */
         #custom-panel {
             display: none; background: var(--header); padding: 8px 12px;
             border-bottom: 1px solid var(--border); gap: 15px; align-items: center; justify-content: center;
@@ -133,6 +132,7 @@
     const fileNameDisplay = document.getElementById('file-name-display');
     const container = document.getElementById('chat-container');
     const dropZone = document.getElementById('drop-zone');
+    const resetBtn = document.getElementById('reset-page');
 
     const pickers = {
         header: document.getElementById('headerColor'),
@@ -167,7 +167,7 @@
         body.style.setProperty('--ai-text', getContrastYIQ(aColor));
     }
 
-    // --- SAVE LOGIC ---
+    // --- SAVE & LOAD CONTENT/THEME ---
     saveBtn.onclick = () => {
         const config = {
             header: pickers.header.value,
@@ -177,21 +177,31 @@
             themeMode: themeSelect.value
         };
         localStorage.setItem('fanfic_custom_colors', JSON.stringify(config));
-        const originalText = saveBtn.innerText;
         saveBtn.innerText = "Saved!";
-        setTimeout(() => saveBtn.innerText = originalText, 1500);
+        setTimeout(() => saveBtn.innerText = "Save", 1500);
     };
 
     window.addEventListener('load', () => {
-        const saved = localStorage.getItem('fanfic_custom_colors');
-        if (saved) {
-            const config = JSON.parse(saved);
+        // Load Theme
+        const savedTheme = localStorage.getItem('fanfic_custom_colors');
+        if (savedTheme) {
+            const config = JSON.parse(savedTheme);
             pickers.header.value = config.header;
             pickers.bg.value = config.bg;
             pickers.user.value = config.user;
             pickers.ai.value = config.ai;
             themeSelect.value = config.themeMode || 'default';
             themeSelect.onchange();
+        }
+
+        // Load Content
+        const lastContent = localStorage.getItem('last_file_content');
+        const lastFile = localStorage.getItem('last_file_name');
+        if (lastContent && lastFile) {
+            fileNameDisplay.textContent = `— ${lastFile}`;
+            parseContent(lastContent);
+            dropZone.style.display = 'none';
+            resetBtn.style.display = 'block';
         }
     });
 
@@ -221,14 +231,25 @@
         input.click();
     };
 
+    resetBtn.onclick = () => {
+        localStorage.removeItem('last_file_content');
+        localStorage.removeItem('last_file_name');
+        location.reload();
+    };
+
     function handleFile(file) {
         if (!file) return;
         fileNameDisplay.textContent = `— ${file.name}`;
         const reader = new FileReader();
-        reader.onload = e => parseContent(e.target.result);
+        reader.onload = e => {
+            const content = e.target.result;
+            localStorage.setItem('last_file_content', content);
+            localStorage.setItem('last_file_name', file.name);
+            parseContent(content);
+            dropZone.style.display = 'none';
+            resetBtn.style.display = 'block';
+        };
         reader.readAsText(file);
-        dropZone.style.display = 'none';
-        document.getElementById('reset-page').style.display = 'block';
     }
 
     function parseContent(text) {
