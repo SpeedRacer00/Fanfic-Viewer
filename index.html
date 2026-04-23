@@ -37,7 +37,7 @@
             background-color: var(--bg);
         }
 
-        /* Video/Image Background Container */
+        /* Fixed Background Layer */
         #fixed-bg-layer {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             z-index: -10; pointer-events: none;
@@ -72,6 +72,7 @@
 
         #chat-container { flex: 1; padding: 20px; display: flex; flex-direction: column; gap: 15px; max-width: 900px; margin: 0 auto; width: calc(100% - 40px); position: relative; z-index: 1; }
 
+        /* SOLID BUBBLES */
         .bubble {
             max-width: 85%; padding: 15px; border-radius: 18px; line-height: 1.6;
             word-wrap: break-word; box-shadow: 0 4px 15px rgba(0,0,0,0.4);
@@ -145,7 +146,7 @@
         ai: document.getElementById('aiColor')
     };
 
-    // Scroll tracking
+    // Scroll Position Tracking
     let scrollTimeout;
     body.addEventListener('scroll', () => {
         clearTimeout(scrollTimeout);
@@ -163,14 +164,15 @@
             return;
         }
 
-        // Check if data is a video (base64 video or mp4)
         if (data.startsWith('data:video/mp4') || data.endsWith('.mp4')) {
             fixedBg.style.backgroundImage = 'none';
             bgVideo.src = data;
             bgVideo.style.display = 'block';
-            bgVideo.play().catch(e => console.log("Auto-play prevented", e));
+            bgVideo.play().catch(() => {
+                // If autoplay fails, we'll try again on user click
+                console.log("Video waiting for interaction...");
+            });
         } else {
-            // Treat as image
             bgVideo.style.display = 'none';
             bgVideo.src = "";
             fixedBg.style.backgroundImage = `url(${data})`;
@@ -178,18 +180,23 @@
         body.style.backgroundColor = 'transparent';
     }
 
+    // New logic with Size Alert
     bgUpload.onchange = (e) => {
         const file = e.target.files[0];
         if (file) {
             const reader = new FileReader();
             reader.onload = (event) => {
                 const mediaData = event.target.result;
-                // Note: Large videos might hit localStorage limits (usually 5MB)
+                
+                // 1. Show it immediately
+                setBackgroundMedia(mediaData);
+
+                // 2. Try to save
                 try {
-                    setBackgroundMedia(mediaData);
                     localStorage.setItem('fanfic_custom_bg', mediaData);
                 } catch (err) {
-                    alert("File is too large to save! Use a smaller file under 5MB.");
+                    alert("⚠️ This file is too large to save permanently (>5MB).\n\nIt will stay visible for now, but you'll have to re-select it next time you open the app.");
+                    localStorage.removeItem('fanfic_custom_bg');
                 }
             };
             reader.readAsDataURL(file);
@@ -201,6 +208,13 @@
         localStorage.removeItem('fanfic_custom_bg');
         bgUpload.value = "";
     };
+
+    // Kickstart video on first interaction
+    document.addEventListener('mousedown', () => {
+        if (bgVideo.style.display === 'block' && bgVideo.paused) {
+            bgVideo.play();
+        }
+    }, { once: true });
 
     function applyCustomMedia() {
         if(themeSelect.value !== 'custom') return;
@@ -253,10 +267,11 @@
             dropZone.style.display = 'none';
             resetBtn.style.display = 'block';
             parseContent(lastContent);
+            
             setTimeout(() => {
                 const savedScroll = localStorage.getItem('fanfic_scroll_pos');
                 if (savedScroll) body.scrollTop = parseInt(savedScroll);
-            }, 100);
+            }, 150);
         }
     });
 
@@ -283,6 +298,7 @@
             localStorage.setItem('last_file_content', content);
             localStorage.setItem('last_file_name', file.name);
             localStorage.setItem('fanfic_scroll_pos', 0);
+            
             document.getElementById('file-name-display').textContent = `— ${file.name}`;
             dropZone.style.display = 'none';
             resetBtn.style.display = 'block';
