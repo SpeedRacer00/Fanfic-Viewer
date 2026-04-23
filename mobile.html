@@ -16,6 +16,7 @@
         body.theme-discord { --bg: #313338; --header: #1e1f22; --border: #232428; --text: #dbdee1; --user-bg: #404249; --user-text: #ffffff; --ai-bg: #2b2d31; --ai-text: #dbdee1; --header-text: #fff; }
         body.theme-messenger { --bg: #000000; --header: #121212; --border: #222; --text: #fff; --user-bg: #0084ff; --user-text: #fff; --ai-bg: #242526; --ai-text: #fff; }
         body.theme-whatsapp { --bg: #0b141a; --header: #202c33; --border: #222d34; --text: #e9edef; --user-bg: #005c4b; --user-text: #ffffff; --ai-bg: #202c33; --ai-text: #e9edef; }
+        body.theme-chatgpt { --bg: #212121; --header: #212121; --border: #3d3d3d; --text: #ececec; --user-bg: #2f2f2f; --user-text: #ffffff; --ai-bg: #212121; --ai-text: #ececec; }
         
         html, body { height: 100%; margin: 0; padding: 0; background-color: #000; overflow-x: hidden; }
 
@@ -25,6 +26,7 @@
             display: flex; flex-direction: column;
             padding-top: 70px;
             background-color: var(--bg);
+            scroll-behavior: smooth;
         }
 
         #fixed-bg-layer {
@@ -40,7 +42,7 @@
 
         header {
             position: fixed; top: 0; left: 0; width: 100%; height: 65px;
-            padding: 0 15px; background: var(--header);
+            padding: 0 12px; background: var(--header);
             display: flex; justify-content: space-between; align-items: center;
             border-bottom: 1px solid var(--border);
             z-index: 9999; box-sizing: border-box;
@@ -50,6 +52,15 @@
             background: #444; color: #fff; border: 1px solid #666; 
             padding: 10px 14px; border-radius: 8px; font-size: 14px; 
             text-decoration: none; display: inline-flex; align-items: center;
+            justify-content: center; box-sizing: border-box;
+            min-height: 44px;
+        }
+
+        /* Fix for File Upload button extending past others */
+        input[type="file"].btn-ui {
+            width: 100%;
+            display: block;
+            line-height: 24px;
         }
 
         #custom-panel {
@@ -57,30 +68,31 @@
             border-bottom: 1px solid var(--border); 
             position: fixed; top: 65px; left: 0; width: 100%; z-index: 9998; 
             box-sizing: border-box; flex-direction: column; gap: 15px;
-            max-height: 80vh; overflow-y: auto;
+            max-height: calc(100vh - 70px); overflow-y: auto;
         }
 
-        .color-row { display: flex; justify-content: space-between; align-items: center; color: white; }
-        input[type="color"] { width: 50px; height: 30px; border: none; border-radius: 4px; }
+        .color-row { display: flex; justify-content: space-between; align-items: center; color: white; font-size: 14px; font-weight: bold; }
+        input[type="color"] { width: 60px; height: 35px; border: 1px solid #666; border-radius: 6px; background: none; padding: 0; }
 
         #chat-container { 
             flex: 1; padding: 15px; display: flex; flex-direction: column; 
-            gap: 15px; width: 100%; box-sizing: border-box;
+            gap: 15px; width: 100%; box-sizing: border-box; position: relative;
         }
 
         .bubble {
-            max-width: 90%; padding: 12px 16px; border-radius: 20px; 
+            max-width: 92%; padding: 14px 18px; border-radius: 22px; 
             font-size: 16px; line-height: 1.5;
             background-color: var(--ai-bg); color: var(--ai-text); border: var(--bubble-outline);
-            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            box-shadow: 0 3px 12px rgba(0,0,0,0.3);
         }
         .user { align-self: flex-end; background-color: var(--user-bg); color: var(--user-text); border-bottom-right-radius: 4px; border: none !important; }
         .ai { align-self: flex-start; border-bottom-left-radius: 4px; }
         
-        .label { font-size: 0.7em; text-transform: uppercase; margin-bottom: 5px; display: block; font-weight: bold; opacity: 0.7; }
+        .label { font-size: 0.75em; text-transform: uppercase; margin-bottom: 6px; display: block; font-weight: 800; opacity: 0.6; }
+        
         #drop-zone { 
-            border: 2px dashed #66c0f4; padding: 60px 20px; text-align: center; 
-            margin: 20px; border-radius: 15px; background: rgba(0,0,0,0.4); color: white;
+            border: 2px dashed #66c0f4; padding: 70px 20px; text-align: center; 
+            margin: 20px; border-radius: 18px; background: rgba(0,0,0,0.5); color: #66c0f4; font-weight: bold;
         }
     </style>
 </head>
@@ -89,11 +101,11 @@
 <div id="fixed-bg-layer"><video id="bg-video" autoplay muted loop playsinline></video></div>
 
 <header>
-    <div style="display: flex; flex-direction: column;">
-        <span style="font-weight:bold; font-size: 1.1em;">Fanfic Mobile</span>
-        <span id="file-name-display" style="font-size:0.7em; opacity:0.6; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:120px;"></span>
+    <div style="display: flex; flex-direction: column; overflow: hidden; max-width: 45%;">
+        <span style="font-weight:bold; font-size: 1.1em; color: var(--header-text);">Fanfic Mobile</span>
+        <span id="file-name-display" style="font-size:0.7em; opacity:0.6; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"></span>
     </div>
-    <div class="controls" style="display:flex; gap:8px;">
+    <div class="controls" style="display:flex; gap:6px;">
         <a href="index.html" class="btn-ui">💻 PC</a>
         <button id="toggle-custom" class="btn-ui">⚙️</button>
         <button id="reset-page" class="btn-ui" style="display:none;">New</button>
@@ -103,25 +115,26 @@
 <div id="custom-panel">
     <select id="theme-select" class="btn-ui" style="width: 100%;">
         <option value="default">Steam Blue</option>
+        <option value="theme-chatgpt">ChatGPT</option>
         <option value="theme-discord">Discord</option>
         <option value="theme-messenger">Messenger</option>
         <option value="theme-whatsapp">WhatsApp</option>
         <option value="custom">Custom Colors</option>
     </select>
     
-    <div id="mobile-pickers" style="display:none; flex-direction:column; gap:10px;">
+    <div id="mobile-pickers" style="display:none; flex-direction:column; gap:12px;">
         <div class="color-row">Header <input type="color" id="headerColor" value="#171a21"></div>
         <div class="color-row">Background <input type="color" id="bgColor" value="#1b2838"></div>
         <div class="color-row">User Bubble <input type="color" id="userColor" value="#2a475e"></div>
         <div class="color-row">AI Bubble <input type="color" id="aiColor" value="#1e2026"></div>
     </div>
 
-    <input type="file" id="bgUpload" accept="image/*,video/mp4" class="btn-ui" style="width: 100%;">
+    <input type="file" id="bgUpload" accept="image/*,video/mp4" class="btn-ui">
     <button id="clear-bg" class="btn-ui">Clear Background</button>
-    <button id="save-theme" class="btn-ui" style="background:#28a745; border:none;">Save Settings</button>
+    <button id="save-theme" class="btn-ui" style="background:#28a745; border:none; font-weight:bold;">Save Settings</button>
 </div>
 
-<div id="drop-zone">Tap to upload your fanfic (.txt or .md)</div>
+<div id="drop-zone">Tap to upload your fanfic</div>
 <div id="chat-container"></div>
 
 <script>
@@ -188,7 +201,7 @@
             reader.onload = (event) => {
                 const mediaData = event.target.result;
                 setBackgroundMedia(mediaData);
-                try { localStorage.setItem('fanfic_custom_bg', mediaData); } catch (err) { alert("File too large to save!"); }
+                try { localStorage.setItem('fanfic_custom_bg', mediaData); } catch (err) { alert("File too large!"); }
             };
             reader.readAsDataURL(file);
         }
