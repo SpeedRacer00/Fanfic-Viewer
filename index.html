@@ -7,13 +7,20 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/4.3.0/marked.min.js"></script>
     <style>
         /* --- THEME DEFINITIONS --- */
-        /* Steam Blue is the Default (:root) */
+        /* Updated to Official Steam Hex Codes */
         :root {
-            --bg: #1b2838; --header: #171a21; --border: #2a475e; --text: #dcdedc;
-            --user-bg: #2a475e; --user-text: #66c0f4; --ai-bg: #3d3d3d; --ai-text: #fff;
+            --bg: #1b2838;           /* Steam Dark Blue/Grey */
+            --header: #171a21;       /* Steam Header Black */
+            --border: #2a475e;       /* Steam Section Border */
+            --text: #c7d5e0;         /* Steam Light Blue Text */
+            --user-bg: #2a475e;      /* User Bubble Blue */
+            --user-text: #66c0f4;    /* Steam Bright Blue */
+            --ai-bg: #3d3d3d;        /* Neutral AI Bubble */
+            --ai-text: #ffffff;
             --header-text: #66c0f4;
             --bubble-outline: 1px solid var(--border);
         }
+        
         body.theme-discord { --bg: #313338; --header: #1e1f22; --border: #232428; --text: #dbdee1; --user-bg: #404249; --user-text: #dbdee1; --ai-bg: #2b2d31; --ai-text: #dbdee1; --header-text: #fff; --bubble-outline: 1px solid var(--border); }
         body.theme-messenger { --bg: #000000; --header: #121212; --border: #222; --text: #fff; --user-bg: #0084ff; --user-text: #fff; --ai-bg: #242526; --ai-text: #fff; --header-text: #fff; --bubble-outline: none; }
         body.theme-whatsapp { --bg: #0b141a; --header: #202c33; --border: #222d34; --text: #e9edef; --user-bg: #005c4b; --user-text: #e9edef; --ai-bg: #202c33; --ai-text: #e9edef; --header-text: #fff; --bubble-outline: none; }
@@ -200,7 +207,6 @@
     }
 
     themeSelect.onchange = () => {
-        // Clear all possible theme classes
         body.classList.remove('theme-custom', 'theme-discord', 'theme-messenger', 'theme-whatsapp', 'theme-chatgpt');
         clearCustomOverrides();
         
@@ -210,7 +216,6 @@
             body.classList.add('theme-custom');
             applyCustomMedia();
         } else if (themeSelect.value === 'default') {
-            // Steam Blue is the base CSS, no extra class needed
             toggleBtn.style.display = 'none';
             customPanel.style.display = 'none';
         } else {
@@ -218,8 +223,7 @@
             customPanel.style.display = 'none';
             body.classList.add(themeSelect.value);
         }
-        // Force picker colors to match the theme immediately
-        setTimeout(syncPickersWithTheme, 10);
+        setTimeout(syncPickersWithTheme, 50);
     };
 
     bgUpload.onchange = (e) => {
@@ -308,7 +312,7 @@
             const type = parts[i].toLowerCase();
             let content = parts[i + 1] || "";
             content = content.replace(/^\d{1,2}\/\d{1,2}\/\d{4}.*?\n/i, '');
-            if (i + 2 >= parts.length) content = content.split('---')[0].split('Something went wrong')[0].trim();
+            if (i + 2 >= parts.length) content = content.split('---')[0].split('Something went wrong')[0].split('Powered by')[0].trim();
             if (content.trim()) {
                 const isUser = (type === 'prompt');
                 const div = document.createElement('div');
