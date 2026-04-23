@@ -35,14 +35,18 @@
             overflow-y: auto;
             position: relative;
             background-color: var(--bg);
-            scroll-behavior: smooth;
         }
 
+        /* Video/Image Background Container */
         #fixed-bg-layer {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             z-index: -10; pointer-events: none;
             background-size: cover; background-position: center; background-repeat: no-repeat;
-            display: none;
+        }
+
+        #bg-video {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            object-fit: cover; display: none;
         }
 
         header {
@@ -82,7 +86,9 @@
 </head>
 <body id="main-body">
 
-<div id="fixed-bg-layer"></div>
+<div id="fixed-bg-layer">
+    <video id="bg-video" autoplay muted loop playsinline></video>
+</div>
 
 <header>
     <div style="display:flex; align-items:baseline; gap:6px; overflow:hidden;">
@@ -109,7 +115,7 @@
     <div class="color-group">USR <input type="color" id="userColor" value="#2a475e"></div>
     <div class="color-group">AI <input type="color" id="aiColor" value="#1e2026"></div>
     <div style="display:flex; gap:4px;">
-        <input type="file" id="bgUpload" accept="image/*" style="font-size:9px; width:110px;">
+        <input type="file" id="bgUpload" accept="image/*,video/mp4" style="font-size:9px; width:110px;">
         <button id="clear-bg" class="btn-ui">❌</button>
     </div>
     <button id="save-theme" class="btn-ui" style="background:#28a745; border:none; padding: 3px 8px;">Save</button>
@@ -124,6 +130,7 @@
     const toggleBtn = document.getElementById('toggle-custom');
     const body = document.getElementById('main-body');
     const fixedBg = document.getElementById('fixed-bg-layer');
+    const bgVideo = document.getElementById('bg-video');
     const saveBtn = document.getElementById('save-theme');
     const bgUpload = document.getElementById('bgUpload');
     const clearBgBtn = document.getElementById('clear-bg');
@@ -138,7 +145,7 @@
         ai: document.getElementById('aiColor')
     };
 
-    // --- POSITION SAVING ---
+    // Scroll tracking
     let scrollTimeout;
     body.addEventListener('scroll', () => {
         clearTimeout(scrollTimeout);
@@ -147,16 +154,28 @@
         }, 200);
     });
 
-    function setBackgroundImage(data) {
-        if (data) {
-            fixedBg.style.backgroundImage = `url(${data})`;
-            fixedBg.style.display = 'block';
-            body.style.backgroundColor = 'transparent'; 
-        } else {
+    function setBackgroundMedia(data) {
+        if (!data) {
             fixedBg.style.backgroundImage = 'none';
-            fixedBg.style.display = 'none';
+            bgVideo.style.display = 'none';
+            bgVideo.src = "";
             body.style.backgroundColor = 'var(--bg)';
+            return;
         }
+
+        // Check if data is a video (base64 video or mp4)
+        if (data.startsWith('data:video/mp4') || data.endsWith('.mp4')) {
+            fixedBg.style.backgroundImage = 'none';
+            bgVideo.src = data;
+            bgVideo.style.display = 'block';
+            bgVideo.play().catch(e => console.log("Auto-play prevented", e));
+        } else {
+            // Treat as image
+            bgVideo.style.display = 'none';
+            bgVideo.src = "";
+            fixedBg.style.backgroundImage = `url(${data})`;
+        }
+        body.style.backgroundColor = 'transparent';
     }
 
     bgUpload.onchange = (e) => {
@@ -164,16 +183,21 @@
         if (file) {
             const reader = new FileReader();
             reader.onload = (event) => {
-                const imgData = event.target.result;
-                setBackgroundImage(imgData);
-                localStorage.setItem('fanfic_custom_bg', imgData);
+                const mediaData = event.target.result;
+                // Note: Large videos might hit localStorage limits (usually 5MB)
+                try {
+                    setBackgroundMedia(mediaData);
+                    localStorage.setItem('fanfic_custom_bg', mediaData);
+                } catch (err) {
+                    alert("File is too large to save! Use a smaller file under 5MB.");
+                }
             };
             reader.readAsDataURL(file);
         }
     };
 
     clearBgBtn.onclick = () => {
-        setBackgroundImage(null);
+        setBackgroundMedia(null);
         localStorage.removeItem('fanfic_custom_bg');
         bgUpload.value = "";
     };
@@ -198,7 +222,7 @@
             customPanel.style.display = 'none';
             if (themeSelect.value !== 'default') body.classList.add(themeSelect.value);
         }
-        setBackgroundImage(localStorage.getItem('fanfic_custom_bg'));
+        setBackgroundMedia(localStorage.getItem('fanfic_custom_bg'));
     };
 
     saveBtn.onclick = () => {
@@ -213,12 +237,12 @@
 
     window.addEventListener('load', () => {
         const savedBg = localStorage.getItem('fanfic_custom_bg');
-        if (savedBg) setBackgroundImage(savedBg);
+        if (savedBg) setBackgroundMedia(savedBg);
 
         const savedTheme = localStorage.getItem('fanfic_custom_colors');
         if (savedTheme) {
             const config = JSON.parse(savedTheme);
-            Object.keys(pickers).forEach(key => pickers[key].value = config[key]);
+            Object.keys(pickers).forEach(key => { if(config[key]) pickers[key].value = config[key]; });
             themeSelect.value = config.themeMode || 'default';
         }
         themeSelect.onchange();
@@ -229,8 +253,6 @@
             dropZone.style.display = 'none';
             resetBtn.style.display = 'block';
             parseContent(lastContent);
-
-            // Restore scroll after content is rendered
             setTimeout(() => {
                 const savedScroll = localStorage.getItem('fanfic_scroll_pos');
                 if (savedScroll) body.scrollTop = parseInt(savedScroll);
@@ -261,8 +283,6 @@
             localStorage.setItem('last_file_content', content);
             localStorage.setItem('last_file_name', file.name);
             localStorage.setItem('fanfic_scroll_pos', 0);
-            
-            // Render immediately instead of reloading
             document.getElementById('file-name-display').textContent = `— ${file.name}`;
             dropZone.style.display = 'none';
             resetBtn.style.display = 'block';
