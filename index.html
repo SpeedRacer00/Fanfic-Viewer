@@ -167,10 +167,10 @@
         body.style.setProperty('--ai-text', getContrastYIQ(aColor));
     }
 
-    // --- SAVE SCROLL POSITION ---
-    body.onscroll = () => {
+    // --- SCROLL STORAGE ---
+    body.addEventListener('scroll', () => {
         localStorage.setItem('last_scroll_pos', body.scrollTop);
-    };
+    });
 
     saveBtn.onclick = () => {
         const config = {
@@ -186,7 +186,6 @@
     };
 
     window.addEventListener('load', () => {
-        // Load Theme
         const savedTheme = localStorage.getItem('fanfic_custom_colors');
         if (savedTheme) {
             const config = JSON.parse(savedTheme);
@@ -198,20 +197,24 @@
             themeSelect.onchange();
         }
 
-        // Load Content
         const lastContent = localStorage.getItem('last_file_content');
         const lastFile = localStorage.getItem('last_file_name');
         if (lastContent && lastFile) {
             fileNameDisplay.textContent = `— ${lastFile}`;
-            parseContent(lastContent);
             dropZone.style.display = 'none';
             resetBtn.style.display = 'block';
+            
+            // Watch for the container to fill up before scrolling
+            const observer = new MutationObserver(() => {
+                const savedScroll = localStorage.getItem('last_scroll_pos');
+                if (savedScroll) {
+                    body.scrollTop = parseInt(savedScroll);
+                }
+                observer.disconnect(); // Stop watching once positioned
+            });
 
-            // RESTORE SCROLL
-            const savedScroll = localStorage.getItem('last_scroll_pos');
-            if (savedScroll) {
-                setTimeout(() => { body.scrollTop = savedScroll; }, 100);
-            }
+            observer.observe(container, { childList: true });
+            parseContent(lastContent);
         }
     });
 
@@ -244,7 +247,7 @@
     resetBtn.onclick = () => {
         localStorage.removeItem('last_file_content');
         localStorage.removeItem('last_file_name');
-        localStorage.removeItem('last_scroll_pos'); // Clear scroll on reset
+        localStorage.removeItem('last_scroll_pos');
         location.reload();
     };
 
@@ -256,7 +259,7 @@
             const content = e.target.result;
             localStorage.setItem('last_file_content', content);
             localStorage.setItem('last_file_name', file.name);
-            localStorage.setItem('last_scroll_pos', 0); // New file starts at top
+            localStorage.setItem('last_scroll_pos', 0);
             parseContent(content);
             dropZone.style.display = 'none';
             resetBtn.style.display = 'block';
