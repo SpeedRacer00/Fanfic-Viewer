@@ -58,11 +58,21 @@
         .controls { display: flex; gap: 5px; align-items: center; }
         select, .btn-ui { background: #444; color: #fff; border: 1px solid #666; padding: 4px 6px; border-radius: 4px; cursor: pointer; font-size: 11px; }
 
+        /* --- UPDATED COMPACT PANEL --- */
         #custom-panel {
-            display: none; background: var(--header); padding: 10px;
-            border-bottom: 1px solid var(--border); gap: 12px; align-items: center; justify-content: center;
+            display: none; background: var(--header); padding: 8px 12px;
+            border-bottom: 1px solid var(--border); gap: 15px; align-items: center; justify-content: center;
             position: fixed; top: 60px; left: 0; width: 100%; z-index: 9998; box-sizing: border-box;
         }
+        .color-group { display: flex; align-items: center; gap: 5px; font-size: 10px; font-weight: bold; color: var(--header-text); }
+        
+        /* Tiny Square Style */
+        input[type="color"] {
+            -webkit-appearance: none; border: 1px solid #555; width: 18px; height: 18px; 
+            cursor: pointer; background: none; padding: 0; border-radius: 2px;
+        }
+        input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+        input[type="color"]::-webkit-color-swatch { border: none; }
 
         #chat-container { flex: 1; padding: 20px; display: flex; flex-direction: column; gap: 15px; max-width: 900px; margin: 0 auto; width: calc(100% - 40px); }
 
@@ -104,14 +114,12 @@
 </header>
 
 <div id="custom-panel">
-    <div style="display:flex; gap:8px; font-size:10px;">
-        <label>HDR <input type="color" id="headerColor" value="#171a21"></label>
-        <label>BG <input type="color" id="bgColor" value="#1b2838"></label>
-        <label>USR <input type="color" id="userColor" value="#2a475e"></label>
-        <label>AI <input type="color" id="aiColor" value="#1e2026"></label>
-    </div>
+    <div class="color-group">HDR <input type="color" id="headerColor" value="#171a21"></div>
+    <div class="color-group">BG <input type="color" id="bgColor" value="#1b2838"></div>
+    <div class="color-group">USR <input type="color" id="userColor" value="#2a475e"></div>
+    <div class="color-group">AI <input type="color" id="aiColor" value="#1e2026"></div>
     <input type="file" id="bgUpload" accept="image/*" style="font-size:9px; width:120px;">
-    <button id="save-theme" class="btn-ui" style="background:#28a745; border:none;">Save</button>
+    <button id="save-theme" class="btn-ui" style="background:#28a745; border:none; padding: 3px 8px;">Save</button>
 </div>
 
 <div id="drop-zone">Click or drop your fanfic here.</div>
@@ -133,7 +141,6 @@
         ai: document.getElementById('aiColor')
     };
 
-    // --- CONTRAST LOGIC ---
     function getContrastYIQ(hexcolor){
         hexcolor = hexcolor.replace("#", "");
         const r = parseInt(hexcolor.substr(0,2),16);
@@ -141,12 +148,6 @@
         const b = parseInt(hexcolor.substr(4,2),16);
         const yiq = ((r*299)+(g*587)+(b*114))/1000;
         return (yiq >= 128) ? '#000000' : '#ffffff';
-    }
-
-    function rgbToHex(rgb) {
-        if (!rgb || !rgb.startsWith('rgb')) return rgb;
-        const m = rgb.match(/\d+/g);
-        return "#" + ((1 << 24) + (parseInt(m[0]) << 16) + (parseInt(m[1]) << 8) + parseInt(m[2])).toString(16).slice(1);
     }
 
     function applyCustomMedia() {
@@ -160,17 +161,15 @@
         body.style.setProperty('--user-bg', uColor);
         body.style.setProperty('--ai-bg', aColor);
 
-        // Update Text Colors based on brightness
         body.style.setProperty('--header-text', getContrastYIQ(hColor) === '#000000' ? '#000000' : '#66c0f4');
         body.style.setProperty('--text', getContrastYIQ(bColor));
-        body.style.setProperty('--user-text', getContrastYIQ(uColor));
+        body.style.setProperty('--user-text', getContrastYIQ(uColor) === '#000000' ? '#000000' : '#66c0f4');
         body.style.setProperty('--ai-text', getContrastYIQ(aColor));
     }
 
     themeSelect.onchange = () => {
         body.classList.remove('theme-discord', 'theme-messenger', 'theme-whatsapp', 'theme-chatgpt', 'theme-custom');
-        body.style = ""; // Clear overrides
-        
+        body.style = ""; 
         if (themeSelect.value === 'custom') {
             customPanel.style.display = 'flex';
             body.classList.add('theme-custom');
