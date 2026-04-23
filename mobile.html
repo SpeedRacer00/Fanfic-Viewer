@@ -15,6 +15,7 @@
         
         body.theme-discord { --bg: #313338; --header: #1e1f22; --border: #232428; --text: #dbdee1; --user-bg: #404249; --user-text: #ffffff; --ai-bg: #2b2d31; --ai-text: #dbdee1; --header-text: #fff; }
         body.theme-messenger { --bg: #000000; --header: #121212; --border: #222; --text: #fff; --user-bg: #0084ff; --user-text: #fff; --ai-bg: #242526; --ai-text: #fff; }
+        body.theme-whatsapp { --bg: #0b141a; --header: #202c33; --border: #222d34; --text: #e9edef; --user-bg: #005c4b; --user-text: #ffffff; --ai-bg: #202c33; --ai-text: #e9edef; }
         
         html, body { height: 100%; margin: 0; padding: 0; background-color: #000; overflow-x: hidden; }
 
@@ -22,7 +23,7 @@
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             color: var(--text);
             display: flex; flex-direction: column;
-            padding-top: 70px; /* Slightly more space for mobile header */
+            padding-top: 70px;
             background-color: var(--bg);
         }
 
@@ -45,10 +46,10 @@
             z-index: 9999; box-sizing: border-box;
         }
 
-        /* THUMB FRIENDLY BUTTONS */
         .btn-ui { 
             background: #444; color: #fff; border: 1px solid #666; 
             padding: 10px 14px; border-radius: 8px; font-size: 14px; 
+            text-decoration: none; display: inline-flex; align-items: center;
         }
 
         #custom-panel {
@@ -56,7 +57,11 @@
             border-bottom: 1px solid var(--border); 
             position: fixed; top: 65px; left: 0; width: 100%; z-index: 9998; 
             box-sizing: border-box; flex-direction: column; gap: 15px;
+            max-height: 80vh; overflow-y: auto;
         }
+
+        .color-row { display: flex; justify-content: space-between; align-items: center; color: white; }
+        input[type="color"] { width: 50px; height: 30px; border: none; border-radius: 4px; }
 
         #chat-container { 
             flex: 1; padding: 15px; display: flex; flex-direction: column; 
@@ -65,15 +70,17 @@
 
         .bubble {
             max-width: 90%; padding: 12px 16px; border-radius: 20px; 
-            font-size: 16px; /* Larger text for mobile reading */
+            font-size: 16px; line-height: 1.5;
             background-color: var(--ai-bg); color: var(--ai-text); border: var(--bubble-outline);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
         }
-        .user { align-self: flex-end; background-color: var(--user-bg); color: var(--user-text); border-bottom-right-radius: 4px; }
+        .user { align-self: flex-end; background-color: var(--user-bg); color: var(--user-text); border-bottom-right-radius: 4px; border: none !important; }
         .ai { align-self: flex-start; border-bottom-left-radius: 4px; }
         
+        .label { font-size: 0.7em; text-transform: uppercase; margin-bottom: 5px; display: block; font-weight: bold; opacity: 0.7; }
         #drop-zone { 
-            border: 2px dashed #66c0f4; padding: 40px 20px; text-align: center; 
-            margin: 20px; border-radius: 15px; background: rgba(0,0,0,0.4); 
+            border: 2px dashed #66c0f4; padding: 60px 20px; text-align: center; 
+            margin: 20px; border-radius: 15px; background: rgba(0,0,0,0.4); color: white;
         }
     </style>
 </head>
@@ -82,9 +89,13 @@
 <div id="fixed-bg-layer"><video id="bg-video" autoplay muted loop playsinline></video></div>
 
 <header>
-    <span style="font-weight:bold; font-size: 1.1em;">Fanfic Mobile</span>
-    <div class="controls">
-        <button id="toggle-custom" class="btn-ui">Settings</button>
+    <div style="display: flex; flex-direction: column;">
+        <span style="font-weight:bold; font-size: 1.1em;">Fanfic Mobile</span>
+        <span id="file-name-display" style="font-size:0.7em; opacity:0.6; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:120px;"></span>
+    </div>
+    <div class="controls" style="display:flex; gap:8px;">
+        <a href="index.html" class="btn-ui">💻 PC</a>
+        <button id="toggle-custom" class="btn-ui">⚙️</button>
         <button id="reset-page" class="btn-ui" style="display:none;">New</button>
     </div>
 </header>
@@ -94,19 +105,29 @@
         <option value="default">Steam Blue</option>
         <option value="theme-discord">Discord</option>
         <option value="theme-messenger">Messenger</option>
+        <option value="theme-whatsapp">WhatsApp</option>
         <option value="custom">Custom Colors</option>
     </select>
+    
+    <div id="mobile-pickers" style="display:none; flex-direction:column; gap:10px;">
+        <div class="color-row">Header <input type="color" id="headerColor" value="#171a21"></div>
+        <div class="color-row">Background <input type="color" id="bgColor" value="#1b2838"></div>
+        <div class="color-row">User Bubble <input type="color" id="userColor" value="#2a475e"></div>
+        <div class="color-row">AI Bubble <input type="color" id="aiColor" value="#1e2026"></div>
+    </div>
+
     <input type="file" id="bgUpload" accept="image/*,video/mp4" class="btn-ui" style="width: 100%;">
     <button id="clear-bg" class="btn-ui">Clear Background</button>
-    <button id="save-theme" class="btn-ui" style="background:#28a745;">Save Settings</button>
+    <button id="save-theme" class="btn-ui" style="background:#28a745; border:none;">Save Settings</button>
 </div>
 
-<div id="drop-zone">Tap to upload your fanfic</div>
+<div id="drop-zone">Tap to upload your fanfic (.txt or .md)</div>
 <div id="chat-container"></div>
 
 <script>
     const themeSelect = document.getElementById('theme-select');
     const customPanel = document.getElementById('custom-panel');
+    const mobilePickers = document.getElementById('mobile-pickers');
     const toggleBtn = document.getElementById('toggle-custom');
     const body = document.getElementById('main-body');
     const fixedBg = document.getElementById('fixed-bg-layer');
@@ -141,26 +162,22 @@
             bgVideo.style.display = 'none';
             bgVideo.pause();
             bgVideo.src = "";
-            // Ensure the fixed layer still shows the theme color if no media
             fixedBg.style.backgroundColor = 'var(--bg)';
             return;
         }
-
         const isVideo = data.startsWith('data:video') || data.includes('.mp4');
-
         if (isVideo) {
             fixedBg.style.backgroundImage = 'none';
             bgVideo.src = data;
             bgVideo.style.display = 'block';
             bgVideo.load();
-            bgVideo.play().catch(() => console.log("Video suspended. Click to resume."));
+            bgVideo.play().catch(() => {});
         } else {
             bgVideo.style.display = 'none';
             bgVideo.pause();
             bgVideo.src = "";
             fixedBg.style.backgroundImage = `url(${data})`;
         }
-        // When media is active, we don't want the solid color overlaying it
         fixedBg.style.backgroundColor = isVideo ? 'transparent' : 'var(--bg)';
     }
 
@@ -171,12 +188,7 @@
             reader.onload = (event) => {
                 const mediaData = event.target.result;
                 setBackgroundMedia(mediaData);
-                try {
-                    localStorage.setItem('fanfic_custom_bg', mediaData);
-                } catch (err) {
-                    alert("⚠️ File too large to save! It will work for this session only.");
-                    localStorage.removeItem('fanfic_custom_bg');
-                }
+                try { localStorage.setItem('fanfic_custom_bg', mediaData); } catch (err) { alert("File too large to save!"); }
             };
             reader.readAsDataURL(file);
         }
@@ -188,12 +200,6 @@
         bgUpload.value = "";
     };
 
-    document.addEventListener('click', () => {
-        if (bgVideo.style.display === 'block' && bgVideo.paused) {
-            bgVideo.play();
-        }
-    }, { once: true });
-
     function applyCustomMedia() {
         if(themeSelect.value !== 'custom') return;
         body.style.setProperty('--header', pickers.header.value);
@@ -202,23 +208,18 @@
         body.style.setProperty('--ai-bg', pickers.ai.value);
         body.style.setProperty('--user-text', getContrastYIQ(pickers.user.value));
         body.style.setProperty('--ai-text', getContrastYIQ(pickers.ai.value));
-        
-        // Force the fixed layer to update its solid color immediately
         fixedBg.style.backgroundColor = pickers.bg.value;
     }
 
     themeSelect.onchange = () => {
         body.className = ''; 
+        mobilePickers.style.display = (themeSelect.value === 'custom') ? 'flex' : 'none';
         ['--header', '--bg', '--user-bg', '--ai-bg', '--user-text', '--ai-text'].forEach(p => body.style.removeProperty(p));
-        
         if (themeSelect.value === 'custom') {
-            customPanel.style.display = 'flex';
             body.classList.add('theme-custom');
             applyCustomMedia();
         } else {
-            customPanel.style.display = 'none';
             if (themeSelect.value !== 'default') body.classList.add(themeSelect.value);
-            // Update fixed background color based on theme root variables
             fixedBg.style.backgroundColor = 'var(--bg)';
         }
         setBackgroundMedia(localStorage.getItem('fanfic_custom_bg'));
@@ -231,14 +232,12 @@
         };
         localStorage.setItem('fanfic_custom_colors', JSON.stringify(config));
         saveBtn.innerText = "Saved!";
-        setTimeout(() => saveBtn.innerText = "Save", 1500);
+        setTimeout(() => { saveBtn.innerText = "Save Settings"; customPanel.style.display = 'none'; }, 1000);
     };
 
     window.addEventListener('load', () => {
         const savedBg = localStorage.getItem('fanfic_custom_bg');
-        if (savedBg) {
-            setTimeout(() => setBackgroundMedia(savedBg), 50);
-        }
+        if (savedBg) setTimeout(() => setBackgroundMedia(savedBg), 50);
 
         const savedTheme = localStorage.getItem('fanfic_custom_colors');
         if (savedTheme) {
@@ -250,9 +249,9 @@
 
         const lastContent = localStorage.getItem('last_file_content');
         if (lastContent) {
-            document.getElementById('file-name-display').textContent = `— ${localStorage.getItem('last_file_name')}`;
+            document.getElementById('file-name-display').textContent = localStorage.getItem('last_file_name');
             dropZone.style.display = 'none';
-            resetBtn.style.display = 'block';
+            resetBtn.style.display = 'inline-flex';
             parseContent(lastContent);
             setTimeout(() => {
                 const savedScroll = localStorage.getItem('fanfic_scroll_pos');
@@ -264,9 +263,7 @@
     let scrollTimeout;
     body.onscroll = () => {
         clearTimeout(scrollTimeout);
-        scrollTimeout = setTimeout(() => {
-            localStorage.setItem('fanfic_scroll_pos', body.scrollTop);
-        }, 250);
+        scrollTimeout = setTimeout(() => { localStorage.setItem('fanfic_scroll_pos', body.scrollTop); }, 250);
     };
 
     Object.values(pickers).forEach(p => p.oninput = applyCustomMedia);
