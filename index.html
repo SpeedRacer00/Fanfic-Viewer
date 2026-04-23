@@ -12,18 +12,19 @@
             --header: #171a21;
             --border: #2a475e;
             --text: #c7d5e0;
-            --user-bg: #2a475e;
-            --user-text: #66c0f4;
+            /* Blue from image_3.png, now defaults to White text below */
+            --user-bg: #2a475e; 
+            --user-text: #ffffff; /* REQUEST CHANGE: User text white by default */
             --ai-bg: #1e2026;
             --ai-text: #ffffff;
             --header-text: #66c0f4;
             --bubble-outline: 1px solid var(--border);
         }
         
-        body.theme-discord { --bg: #313338; --header: #1e1f22; --border: #232428; --text: #dbdee1; --user-bg: #404249; --user-text: #dbdee1; --ai-bg: #2b2d31; --ai-text: #dbdee1; --header-text: #fff; --bubble-outline: 1px solid var(--border); }
+        body.theme-discord { --bg: #313338; --header: #1e1f22; --border: #232428; --text: #dbdee1; --user-bg: #404249; --user-text: #ffffff; --ai-bg: #2b2d31; --ai-text: #dbdee1; --header-text: #fff; --bubble-outline: 1px solid var(--border); }
         body.theme-messenger { --bg: #000000; --header: #121212; --border: #222; --text: #fff; --user-bg: #0084ff; --user-text: #fff; --ai-bg: #242526; --ai-text: #fff; --header-text: #fff; --bubble-outline: none; }
-        body.theme-whatsapp { --bg: #0b141a; --header: #202c33; --border: #222d34; --text: #e9edef; --user-bg: #005c4b; --user-text: #e9edef; --ai-bg: #202c33; --ai-text: #e9edef; --header-text: #fff; --bubble-outline: none; }
-        body.theme-chatgpt { --bg: #212121; --header: #212121; --border: #3d3d3d; --text: #ececec; --user-bg: #2f2f2f; --user-text: #ececec; --ai-bg: #212121; --ai-text: #ececec; --header-text: #ececec; --bubble-outline: none; }
+        body.theme-whatsapp { --bg: #0b141a; --header: #202c33; --border: #222d34; --text: #e9edef; --user-bg: #005c4b; --user-text: #ffffff; --ai-bg: #202c33; --ai-text: #e9edef; --header-text: #fff; --bubble-outline: none; }
+        body.theme-chatgpt { --bg: #212121; --header: #212121; --border: #3d3d3d; --text: #ececec; --user-bg: #2f2f2f; --user-text: #ffffff; --ai-bg: #212121; --ai-text: #ececec; --header-text: #ececec; --bubble-outline: none; }
         
         html, body { height: 100%; margin: 0; padding: 0; background-color: #000; }
 
@@ -35,13 +36,14 @@
             overflow-y: auto;
             position: relative;
             background-color: var(--bg);
+            scroll-behavior: smooth;
         }
 
-        /* Fixed Background Layer */
         #fixed-bg-layer {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             z-index: -10; pointer-events: none;
             background-size: cover; background-position: center; background-repeat: no-repeat;
+            display: none;
         }
 
         #bg-video {
@@ -72,7 +74,6 @@
 
         #chat-container { flex: 1; padding: 20px; display: flex; flex-direction: column; gap: 15px; max-width: 900px; margin: 0 auto; width: calc(100% - 40px); position: relative; z-index: 1; }
 
-        /* SOLID BUBBLES */
         .bubble {
             max-width: 85%; padding: 15px; border-radius: 18px; line-height: 1.6;
             word-wrap: break-word; box-shadow: 0 4px 15px rgba(0,0,0,0.4);
@@ -155,6 +156,16 @@
         }, 200);
     });
 
+    // Helper function for contrast calculation
+    function getContrastYIQ(hexcolor){
+        hexcolor = hexcolor.replace("#", "");
+        const r = parseInt(hexcolor.substr(0,2),16);
+        const g = parseInt(hexcolor.substr(2,2),16);
+        const b = parseInt(hexcolor.substr(4,2),16);
+        const yiq = ((r*299)+(g*587)+(b*114))/1000;
+        return (yiq >= 128) ? '#000000' : '#ffffff';
+    }
+
     function setBackgroundMedia(data) {
         if (!data) {
             fixedBg.style.backgroundImage = 'none';
@@ -169,7 +180,6 @@
             bgVideo.src = data;
             bgVideo.style.display = 'block';
             bgVideo.play().catch(() => {
-                // If autoplay fails, we'll try again on user click
                 console.log("Video waiting for interaction...");
             });
         } else {
@@ -216,17 +226,24 @@
         }
     }, { once: true });
 
+    // UPDATED applyCustomMedia with REQUESTED CHANGE
     function applyCustomMedia() {
         if(themeSelect.value !== 'custom') return;
         body.style.setProperty('--header', pickers.header.value);
         body.style.setProperty('--bg', pickers.bg.value);
         body.style.setProperty('--user-bg', pickers.user.value);
         body.style.setProperty('--ai-bg', pickers.ai.value);
+
+        // Update User bubble text color automatically
+        body.style.setProperty('--user-text', getContrastYIQ(pickers.user.value));
+        
+        // Ensure AI bubble also has contrast (defaults to AI text color)
+        body.style.setProperty('--ai-text', getContrastYIQ(pickers.ai.value));
     }
 
     themeSelect.onchange = () => {
         body.className = ''; 
-        ['--header', '--bg', '--user-bg', '--ai-bg'].forEach(prop => body.style.removeProperty(prop));
+        ['--header', '--bg', '--user-bg', '--ai-bg', '--user-text', '--ai-text'].forEach(prop => body.style.removeProperty(prop));
 
         if (themeSelect.value === 'custom') {
             customPanel.style.display = 'flex';
