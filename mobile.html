@@ -29,15 +29,17 @@
             scroll-behavior: smooth;
         }
 
+        /* The layer that holds the solid color and the image */
         #fixed-bg-layer {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             z-index: -10; background-size: cover; background-position: center;
-            background-color: var(--bg); /* Fallback color */
+            background-repeat: no-repeat;
+            background-color: var(--bg); 
         }
 
         #bg-video {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            object-fit: cover; display: none;
+            object-fit: cover; display: none; z-index: -5;
         }
 
         header {
@@ -56,7 +58,6 @@
             min-height: 44px;
         }
 
-        /* Fixed Button Alignment */
         input[type="file"].btn-ui {
             width: 100%;
             display: block;
@@ -98,7 +99,9 @@
 </head>
 <body id="main-body">
 
-<div id="fixed-bg-layer"><video id="bg-video" autoplay muted loop playsinline></video></div>
+<div id="fixed-bg-layer">
+    <video id="bg-video" autoplay muted loop playsinline></video>
+</div>
 
 <header>
     <div style="display: flex; flex-direction: column; overflow: hidden; max-width: 45%;">
@@ -175,6 +178,7 @@
             bgVideo.style.display = 'none';
             bgVideo.pause();
             bgVideo.src = "";
+            // Restore theme color if no media
             fixedBg.style.backgroundColor = 'var(--bg)';
             return;
         }
@@ -186,13 +190,14 @@
             bgVideo.style.display = 'block';
             bgVideo.load();
             bgVideo.play().catch(() => {});
-            fixedBg.style.backgroundColor = 'transparent'; // Fix: show video
+            fixedBg.style.backgroundColor = 'transparent'; 
         } else {
             bgVideo.style.display = 'none';
             bgVideo.pause();
             bgVideo.src = "";
             fixedBg.style.backgroundImage = `url(${data})`;
-            fixedBg.style.backgroundColor = 'transparent'; // Fix: show image
+            // CRITICAL FIX: Ensure background-color doesn't cover the image
+            fixedBg.style.backgroundColor = 'transparent';
         }
     }
 
@@ -206,7 +211,7 @@
                 try { 
                     localStorage.setItem('fanfic_custom_bg', mediaData); 
                 } catch (err) { 
-                    alert("File too large to save for next time, but it will work now!"); 
+                    alert("File too large to save! It'll only last for this session."); 
                 }
             };
             reader.readAsDataURL(file);
@@ -217,6 +222,7 @@
         setBackgroundMedia(null);
         localStorage.removeItem('fanfic_custom_bg');
         bgUpload.value = "";
+        themeSelect.onchange(); // Refresh theme color
     };
 
     function applyCustomMedia() {
@@ -228,7 +234,7 @@
         body.style.setProperty('--user-text', getContrastYIQ(pickers.user.value));
         body.style.setProperty('--ai-text', getContrastYIQ(pickers.ai.value));
         
-        // If no image is set, use the custom picker color
+        // Only show custom solid color if there is no image/video active
         if(!localStorage.getItem('fanfic_custom_bg')) {
             fixedBg.style.backgroundColor = pickers.bg.value;
         }
@@ -242,16 +248,17 @@
         if (themeSelect.value === 'custom') {
             body.classList.add('theme-custom');
             applyCustomMedia();
-        } else {
-            if (themeSelect.value !== 'default') body.classList.add(themeSelect.value);
+        } else if (themeSelect.value !== 'default') {
+            body.classList.add(themeSelect.value);
         }
 
-        // Final check: media always wins over solid color
+        // Always check media after theme change
         const savedBg = localStorage.getItem('fanfic_custom_bg');
         if (savedBg) {
             setBackgroundMedia(savedBg);
         } else {
-            fixedBg.style.backgroundColor = (themeSelect.value === 'custom') ? pickers.bg.value : 'var(--bg)';
+            // If no media, use the CSS variable background
+            fixedBg.style.backgroundColor = ''; // Clear inline to let CSS variable take over
         }
     };
 
@@ -270,7 +277,7 @@
 
     window.addEventListener('load', () => {
         const savedBg = localStorage.getItem('fanfic_custom_bg');
-        if (savedBg) setTimeout(() => setBackgroundMedia(savedBg), 50);
+        if (savedBg) setBackgroundMedia(savedBg);
 
         const savedTheme = localStorage.getItem('fanfic_custom_colors');
         if (savedTheme) {
@@ -288,15 +295,13 @@
             parseContent(lastContent);
             setTimeout(() => {
                 const savedScroll = localStorage.getItem('fanfic_scroll_pos');
-                if (savedScroll) body.scrollTop = parseInt(savedScroll);
+                if (savedScroll) window.scrollTo(0, parseInt(savedScroll));
             }, 200);
         }
     });
 
-    let scrollTimeout;
-    body.onscroll = () => {
-        clearTimeout(scrollTimeout);
-        scrollTimeout = setTimeout(() => { localStorage.setItem('fanfic_scroll_pos', body.scrollTop); }, 250);
+    window.onscroll = () => {
+        localStorage.setItem('fanfic_scroll_pos', window.scrollY);
     };
 
     Object.values(pickers).forEach(p => p.oninput = applyCustomMedia);
