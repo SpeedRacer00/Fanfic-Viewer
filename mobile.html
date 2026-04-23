@@ -18,28 +18,30 @@
         body.theme-whatsapp { --bg: #0b141a; --header: #202c33; --border: #222d34; --text: #e9edef; --user-bg: #005c4b; --user-text: #ffffff; --ai-bg: #202c33; --ai-text: #e9edef; }
         body.theme-chatgpt { --bg: #212121; --header: #212121; --border: #3d3d3d; --text: #ececec; --user-bg: #2f2f2f; --user-text: #ffffff; --ai-bg: #212121; --ai-text: #ececec; }
         
-        html, body { height: 100%; margin: 0; padding: 0; background-color: #000; overflow-x: hidden; }
+        html, body { height: 100%; margin: 0; padding: 0; overflow-x: hidden; }
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             color: var(--text);
             display: flex; flex-direction: column;
             padding-top: 70px;
-            background-color: var(--bg);
-            scroll-behavior: smooth;
+            /* Base color is set via JS to avoid covering images */
+            background-color: var(--bg); 
+            background-attachment: fixed;
         }
 
-        /* The layer that holds the solid color and the image */
         #fixed-bg-layer {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            z-index: -10; background-size: cover; background-position: center;
+            z-index: -20; 
+            background-size: cover; 
+            background-position: center;
             background-repeat: no-repeat;
-            background-color: var(--bg); 
+            pointer-events: none;
         }
 
         #bg-video {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            object-fit: cover; display: none; z-index: -5;
+            object-fit: cover; display: none; z-index: -15;
         }
 
         header {
@@ -54,15 +56,10 @@
             background: #444; color: #fff; border: 1px solid #666; 
             padding: 10px 14px; border-radius: 8px; font-size: 14px; 
             text-decoration: none; display: inline-flex; align-items: center;
-            justify-content: center; box-sizing: border-box;
-            min-height: 44px;
+            justify-content: center; box-sizing: border-box; min-height: 44px;
         }
 
-        input[type="file"].btn-ui {
-            width: 100%;
-            display: block;
-            line-height: 24px;
-        }
+        input[type="file"].btn-ui { width: 100%; display: block; line-height: 24px; }
 
         #custom-panel {
             display: none; background: var(--header); padding: 20px;
@@ -75,10 +72,7 @@
         .color-row { display: flex; justify-content: space-between; align-items: center; color: white; font-size: 14px; font-weight: bold; }
         input[type="color"] { width: 60px; height: 35px; border: 1px solid #666; border-radius: 6px; background: none; padding: 0; }
 
-        #chat-container { 
-            flex: 1; padding: 15px; display: flex; flex-direction: column; 
-            gap: 15px; width: 100%; box-sizing: border-box; position: relative;
-        }
+        #chat-container { flex: 1; padding: 15px; display: flex; flex-direction: column; gap: 15px; width: 100%; box-sizing: border-box; }
 
         .bubble {
             max-width: 92%; padding: 14px 18px; border-radius: 22px; 
@@ -88,13 +82,9 @@
         }
         .user { align-self: flex-end; background-color: var(--user-bg); color: var(--user-text); border-bottom-right-radius: 4px; border: none !important; }
         .ai { align-self: flex-start; border-bottom-left-radius: 4px; }
-        
         .label { font-size: 0.75em; text-transform: uppercase; margin-bottom: 6px; display: block; font-weight: 800; opacity: 0.6; }
         
-        #drop-zone { 
-            border: 2px dashed #66c0f4; padding: 70px 20px; text-align: center; 
-            margin: 20px; border-radius: 18px; background: rgba(0,0,0,0.5); color: #66c0f4; font-weight: bold;
-        }
+        #drop-zone { border: 2px dashed #66c0f4; padding: 70px 20px; text-align: center; margin: 20px; border-radius: 18px; background: rgba(0,0,0,0.5); color: #66c0f4; font-weight: bold; }
     </style>
 </head>
 <body id="main-body">
@@ -178,8 +168,7 @@
             bgVideo.style.display = 'none';
             bgVideo.pause();
             bgVideo.src = "";
-            // Restore theme color if no media
-            fixedBg.style.backgroundColor = 'var(--bg)';
+            body.style.backgroundColor = 'var(--bg)'; // Use theme color
             return;
         }
 
@@ -188,16 +177,13 @@
             fixedBg.style.backgroundImage = 'none';
             bgVideo.src = data;
             bgVideo.style.display = 'block';
-            bgVideo.load();
             bgVideo.play().catch(() => {});
-            fixedBg.style.backgroundColor = 'transparent'; 
+            body.style.backgroundColor = 'black'; // Black backdrop for video
         } else {
             bgVideo.style.display = 'none';
             bgVideo.pause();
-            bgVideo.src = "";
-            fixedBg.style.backgroundImage = `url(${data})`;
-            // CRITICAL FIX: Ensure background-color doesn't cover the image
-            fixedBg.style.backgroundColor = 'transparent';
+            fixedBg.style.backgroundImage = `url("${data}")`;
+            body.style.backgroundColor = 'transparent'; // Let image show through
         }
     }
 
@@ -208,21 +194,16 @@
             reader.onload = (event) => {
                 const mediaData = event.target.result;
                 setBackgroundMedia(mediaData);
-                try { 
-                    localStorage.setItem('fanfic_custom_bg', mediaData); 
-                } catch (err) { 
-                    alert("File too large to save! It'll only last for this session."); 
-                }
+                try { localStorage.setItem('fanfic_custom_bg', mediaData); } catch (err) {}
             };
             reader.readAsDataURL(file);
         }
     };
 
     clearBgBtn.onclick = () => {
-        setBackgroundMedia(null);
         localStorage.removeItem('fanfic_custom_bg');
-        bgUpload.value = "";
-        themeSelect.onchange(); // Refresh theme color
+        setBackgroundMedia(null);
+        themeSelect.onchange();
     };
 
     function applyCustomMedia() {
@@ -233,11 +214,7 @@
         body.style.setProperty('--ai-bg', pickers.ai.value);
         body.style.setProperty('--user-text', getContrastYIQ(pickers.user.value));
         body.style.setProperty('--ai-text', getContrastYIQ(pickers.ai.value));
-        
-        // Only show custom solid color if there is no image/video active
-        if(!localStorage.getItem('fanfic_custom_bg')) {
-            fixedBg.style.backgroundColor = pickers.bg.value;
-        }
+        if(!localStorage.getItem('fanfic_custom_bg')) body.style.backgroundColor = pickers.bg.value;
     }
 
     themeSelect.onchange = () => {
@@ -252,33 +229,19 @@
             body.classList.add(themeSelect.value);
         }
 
-        // Always check media after theme change
         const savedBg = localStorage.getItem('fanfic_custom_bg');
-        if (savedBg) {
-            setBackgroundMedia(savedBg);
-        } else {
-            // If no media, use the CSS variable background
-            fixedBg.style.backgroundColor = ''; // Clear inline to let CSS variable take over
-        }
+        if (savedBg) setBackgroundMedia(savedBg);
+        else body.style.backgroundColor = 'var(--bg)';
     };
 
     saveBtn.onclick = () => {
-        const config = {
-            header: pickers.header.value, bg: pickers.bg.value,
-            user: pickers.user.value, ai: pickers.ai.value, themeMode: themeSelect.value
-        };
+        const config = { header: pickers.header.value, bg: pickers.bg.value, user: pickers.user.value, ai: pickers.ai.value, themeMode: themeSelect.value };
         localStorage.setItem('fanfic_custom_colors', JSON.stringify(config));
         saveBtn.innerText = "Saved!";
-        setTimeout(() => { 
-            saveBtn.innerText = "Save Settings"; 
-            customPanel.style.display = 'none'; 
-        }, 1000);
+        setTimeout(() => { saveBtn.innerText = "Save Settings"; customPanel.style.display = 'none'; }, 1000);
     };
 
     window.addEventListener('load', () => {
-        const savedBg = localStorage.getItem('fanfic_custom_bg');
-        if (savedBg) setBackgroundMedia(savedBg);
-
         const savedTheme = localStorage.getItem('fanfic_custom_colors');
         if (savedTheme) {
             const config = JSON.parse(savedTheme);
@@ -286,24 +249,18 @@
             themeSelect.value = config.themeMode || 'default';
         }
         themeSelect.onchange();
-
+        
         const lastContent = localStorage.getItem('last_file_content');
         if (lastContent) {
             document.getElementById('file-name-display').textContent = localStorage.getItem('last_file_name');
             dropZone.style.display = 'none';
             resetBtn.style.display = 'inline-flex';
             parseContent(lastContent);
-            setTimeout(() => {
-                const savedScroll = localStorage.getItem('fanfic_scroll_pos');
-                if (savedScroll) window.scrollTo(0, parseInt(savedScroll));
-            }, 200);
+            setTimeout(() => { if (localStorage.getItem('fanfic_scroll_pos')) window.scrollTo(0, parseInt(localStorage.getItem('fanfic_scroll_pos'))); }, 200);
         }
     });
 
-    window.onscroll = () => {
-        localStorage.setItem('fanfic_scroll_pos', window.scrollY);
-    };
-
+    window.onscroll = () => { localStorage.setItem('fanfic_scroll_pos', window.scrollY); };
     Object.values(pickers).forEach(p => p.oninput = applyCustomMedia);
     toggleBtn.onclick = () => customPanel.style.display = (customPanel.style.display === 'flex') ? 'none' : 'flex';
     
