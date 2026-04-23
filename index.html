@@ -6,7 +6,7 @@
     <title>Fanfic Viewer</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/4.3.0/marked.min.js"></script>
     <style>
-        /* --- THEME DEFINITIONS --- */
+        /* --- CORE THEMES --- */
         :root {
             --bg: #1b2838;
             --header: #171a21;
@@ -20,12 +20,12 @@
             --bubble-outline: 1px solid var(--border);
         }
         
-        body.theme-discord { --bg: #313338; --header: #1e1f22; --border: #232428; --text: #dbdee1; --user-bg: #404249; --user-text: #dbdee1; --ai-bg: #2b2d31; --ai-text: #dbdee1; --header-text: #fff; --bubble-outline: 1px solid var(--border); }
+        body.theme-discord { --bg: #313338; --header: #1e1f22; --border: #232428; --text: #dbdee1; --user-bg: #404249; --user-text: #dbdee1; --ai-bg: rgba(43, 45, 49, 0.8); --ai-text: #dbdee1; --header-text: #fff; --bubble-outline: 1px solid var(--border); }
         body.theme-messenger { --bg: #000000; --header: #121212; --border: #222; --text: #fff; --user-bg: #0084ff; --user-text: #fff; --ai-bg: #242526; --ai-text: #fff; --header-text: #fff; --bubble-outline: none; }
         body.theme-whatsapp { --bg: #0b141a; --header: #202c33; --border: #222d34; --text: #e9edef; --user-bg: #005c4b; --user-text: #e9edef; --ai-bg: #202c33; --ai-text: #e9edef; --header-text: #fff; --bubble-outline: none; }
         body.theme-chatgpt { --bg: #212121; --header: #212121; --border: #3d3d3d; --text: #ececec; --user-bg: #2f2f2f; --user-text: #ececec; --ai-bg: transparent; --ai-text: #ececec; --header-text: #ececec; --bubble-outline: none; }
         
-        html, body { height: 100%; margin: 0; padding: 0; background-color: #000; }
+        html, body { height: 100%; margin: 0; padding: 0; background-color: #000; overflow: hidden; }
 
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -34,28 +34,18 @@
             padding-top: 60px;
             overflow-y: auto;
             position: relative;
+            background-color: var(--bg);
         }
 
-        /* OVERHAULED BG LAYER */
+        /* Fixed Background Layer */
         #fixed-bg-layer {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             z-index: -10;
-            background-color: var(--bg);
-            background-position: center;
+            pointer-events: none;
             background-size: cover;
+            background-position: center;
             background-repeat: no-repeat;
         }
-
-        #image-bg-element {
-            width: 100%; height: 100%;
-            object-fit: cover;
-            opacity: 0;
-            display: block;
-        }
-
-        body.has-bg-image #image-bg-element { opacity: 1; }
-        /* Hide the fallback color if image is present */
-        body.has-bg-image #fixed-bg-layer { background-color: transparent; }
 
         header {
             position: fixed; top: 0; left: 0; width: 100%; height: 60px;
@@ -74,20 +64,17 @@
             border-bottom: 1px solid var(--border); gap: 12px; align-items: center; justify-content: center;
             position: fixed; top: 60px; left: 0; width: 100%; z-index: 9998; box-sizing: border-box; flex-wrap: wrap;
         }
-        .color-group { display: flex; align-items: center; gap: 4px; font-size: 10px; font-weight: bold; color: var(--header-text); }
         
-        input[type="color"] {
-            -webkit-appearance: none; border: 1px solid #555; width: 18px; height: 18px; 
-            cursor: pointer; background: none; padding: 0; border-radius: 2px;
-        }
+        .color-group { display: flex; align-items: center; gap: 4px; font-size: 10px; font-weight: bold; color: var(--header-text); }
+        input[type="color"] { -webkit-appearance: none; border: 1px solid #555; width: 18px; height: 18px; cursor: pointer; background: none; padding: 0; border-radius: 2px; }
 
         #chat-container { flex: 1; padding: 20px; display: flex; flex-direction: column; gap: 15px; max-width: 900px; margin: 0 auto; width: calc(100% - 40px); position: relative; z-index: 1; }
 
         .bubble {
             max-width: 85%; padding: 15px; border-radius: 18px; line-height: 1.6;
-            word-wrap: break-word; box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+            word-wrap: break-word; box-shadow: 0 4px 20px rgba(0,0,0,0.3);
             background: var(--ai-bg); color: var(--ai-text);
-            backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
             border: var(--bubble-outline);
         }
         .user { align-self: flex-end; background: var(--user-bg); color: var(--user-text); border-bottom-right-radius: 4px; border: none !important; }
@@ -99,9 +86,7 @@
 </head>
 <body id="main-body">
 
-<div id="fixed-bg-layer">
-    <img id="image-bg-element" src="" alt="">
-</div>
+<div id="fixed-bg-layer"></div>
 
 <header>
     <div style="display:flex; align-items:baseline; gap:6px; overflow:hidden;">
@@ -142,11 +127,10 @@
     const customPanel = document.getElementById('custom-panel');
     const toggleBtn = document.getElementById('toggle-custom');
     const body = document.getElementById('main-body');
+    const fixedBg = document.getElementById('fixed-bg-layer');
     const saveBtn = document.getElementById('save-theme');
     const bgUpload = document.getElementById('bgUpload');
     const clearBgBtn = document.getElementById('clear-bg');
-    const imageBgElement = document.getElementById('image-bg-element');
-    const fileNameDisplay = document.getElementById('file-name-display');
     const container = document.getElementById('chat-container');
     const dropZone = document.getElementById('drop-zone');
     const resetBtn = document.getElementById('reset-page');
@@ -159,6 +143,7 @@
     };
 
     function applyCustomMedia() {
+        if(themeSelect.value !== 'custom') return;
         body.style.setProperty('--header', pickers.header.value);
         body.style.setProperty('--bg', pickers.bg.value);
         body.style.setProperty('--user-bg', pickers.user.value);
@@ -166,12 +151,12 @@
     }
 
     function setBackgroundImage(data) {
-        if (data && data !== "") {
-            imageBgElement.src = data;
-            body.classList.add('has-bg-image');
+        if (data) {
+            fixedBg.style.backgroundImage = `url(${data})`;
+            body.style.backgroundColor = 'transparent'; 
         } else {
-            imageBgElement.src = "";
-            body.classList.remove('has-bg-image');
+            fixedBg.style.backgroundImage = 'none';
+            body.style.backgroundColor = 'var(--bg)';
         }
     }
 
@@ -194,6 +179,27 @@
         bgUpload.value = "";
     };
 
+    themeSelect.onchange = () => {
+        // Reset classes and specific inline styles
+        body.className = ''; 
+        body.style.removeProperty('--header');
+        body.style.removeProperty('--bg');
+        body.style.setProperty('--user-bg', '');
+        body.style.setProperty('--ai-bg', '');
+
+        if (themeSelect.value === 'custom') {
+            customPanel.style.display = 'flex';
+            body.classList.add('theme-custom');
+            applyCustomMedia();
+        } else {
+            customPanel.style.display = 'none';
+            if (themeSelect.value !== 'default') body.classList.add(themeSelect.value);
+        }
+        // Re-check background image layering
+        const savedBg = localStorage.getItem('fanfic_custom_bg');
+        setBackgroundImage(savedBg);
+    };
+
     saveBtn.onclick = () => {
         const config = {
             header: pickers.header.value,
@@ -208,11 +214,9 @@
     };
 
     window.addEventListener('load', () => {
-        // Load BG First
         const savedBg = localStorage.getItem('fanfic_custom_bg');
         if (savedBg) setBackgroundImage(savedBg);
 
-        // Load Theme
         const savedTheme = localStorage.getItem('fanfic_custom_colors');
         if (savedTheme) {
             const config = JSON.parse(savedTheme);
@@ -221,13 +225,12 @@
             pickers.user.value = config.user;
             pickers.ai.value = config.ai;
             themeSelect.value = config.themeMode || 'default';
-            themeSelect.onchange();
         }
+        themeSelect.onchange();
 
-        // Load Content & Scroll
         const lastContent = localStorage.getItem('last_file_content');
         if (lastContent) {
-            fileNameDisplay.textContent = `— ${localStorage.getItem('last_file_name')}`;
+            document.getElementById('file-name-display').textContent = `— ${localStorage.getItem('last_file_name')}`;
             dropZone.style.display = 'none';
             resetBtn.style.display = 'block';
             
@@ -242,21 +245,7 @@
     });
 
     body.onscroll = () => localStorage.setItem('last_scroll_pos', body.scrollTop);
-
-    themeSelect.onchange = () => {
-        body.classList.remove('theme-discord', 'theme-messenger', 'theme-whatsapp', 'theme-chatgpt', 'theme-custom');
-        if (themeSelect.value === 'custom') {
-            customPanel.style.display = 'flex';
-            body.classList.add('theme-custom');
-            applyCustomMedia();
-        } else {
-            customPanel.style.display = 'none';
-            if (themeSelect.value !== 'default') body.classList.add(themeSelect.value);
-            body.style.removeProperty('--bg'); // Let theme handle it
-        }
-    };
-
-    Object.values(pickers).forEach(p => p.oninput = () => { if(themeSelect.value === 'custom') applyCustomMedia(); });
+    Object.values(pickers).forEach(p => p.oninput = applyCustomMedia);
     toggleBtn.onclick = () => customPanel.style.display = (customPanel.style.display === 'flex') ? 'none' : 'flex';
     
     dropZone.onclick = () => {
