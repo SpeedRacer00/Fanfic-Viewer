@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Fanfic Mobile</title>
+    <title>Fanfic Mobile - Pro</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/4.3.0/marked.min.js"></script>
     <style>
         /* --- CORE THEMES --- */
@@ -31,11 +31,8 @@
 
         #fixed-bg-layer {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            z-index: -20; 
-            background-size: cover; 
-            background-position: center;
-            background-repeat: no-repeat;
-            pointer-events: none;
+            z-index: -20; background-size: cover; background-position: center;
+            background-repeat: no-repeat; pointer-events: none;
         }
 
         #bg-video {
@@ -88,9 +85,7 @@
 </head>
 <body id="main-body">
 
-<div id="fixed-bg-layer">
-    <video id="bg-video" autoplay muted loop playsinline></video>
-</div>
+<div id="fixed-bg-layer"><video id="bg-video" autoplay muted loop playsinline></video></div>
 
 <header>
     <div style="display: flex; flex-direction: column; overflow: hidden; max-width: 45%;">
@@ -130,6 +125,35 @@
 <div id="chat-container"></div>
 
 <script>
+    // --- STORAGE UPGRADE: INDEXEDDB ---
+    const dbName = "FanficStorage";
+    const storeName = "files";
+    let db;
+
+    const request = indexedDB.open(dbName, 1);
+    request.onupgradeneeded = (e) => {
+        db = e.target.result;
+        db.createObjectStore(storeName);
+    };
+    request.onsuccess = (e) => {
+        db = e.target.result;
+        loadFromDB();
+    };
+
+    async function saveToDB(key, value) {
+        const tx = db.transaction(storeName, "readwrite");
+        tx.objectStore(storeName).put(value, key);
+    }
+
+    async function getFromDB(key) {
+        return new Promise((resolve) => {
+            const tx = db.transaction(storeName, "readonly");
+            const request = tx.objectStore(storeName).get(key);
+            request.onsuccess = () => resolve(request.result);
+        });
+    }
+
+    // --- APP LOGIC ---
     const themeSelect = document.getElementById('theme-select');
     const customPanel = document.getElementById('custom-panel');
     const mobilePickers = document.getElementById('mobile-pickers');
@@ -139,7 +163,6 @@
     const bgVideo = document.getElementById('bg-video');
     const saveBtn = document.getElementById('save-theme');
     const bgUpload = document.getElementById('bgUpload');
-    const clearBgBtn = document.getElementById('clear-bg');
     const container = document.getElementById('chat-container');
     const dropZone = document.getElementById('drop-zone');
     const resetBtn = document.getElementById('reset-page');
@@ -151,26 +174,14 @@
         ai: document.getElementById('aiColor')
     };
 
-    function getContrastYIQ(hexcolor){
-        hexcolor = hexcolor.replace("#", "");
-        if(hexcolor.length === 3) hexcolor = hexcolor.split('').map(s => s+s).join('');
-        const r = parseInt(hexcolor.substr(0,2),16);
-        const g = parseInt(hexcolor.substr(2,2),16);
-        const b = parseInt(hexcolor.substr(4,2),16);
-        const yiq = ((r*299)+(g*587)+(b*114))/1000;
-        return (yiq >= 128) ? '#000000' : '#ffffff';
-    }
-
     function setBackgroundMedia(data) {
         if (!data) {
             fixedBg.style.backgroundImage = 'none';
             bgVideo.style.display = 'none';
-            bgVideo.pause();
             bgVideo.src = "";
             body.style.backgroundColor = 'var(--bg)';
             return;
         }
-
         const isVideo = data.startsWith('data:video') || data.includes('.mp4');
         if (isVideo) {
             fixedBg.style.backgroundImage = 'none';
@@ -180,7 +191,6 @@
             body.style.backgroundColor = 'black';
         } else {
             bgVideo.style.display = 'none';
-            bgVideo.pause();
             fixedBg.style.backgroundImage = `url("${data}")`;
             body.style.backgroundColor = 'transparent';
         }
@@ -190,57 +200,35 @@
         const file = e.target.files[0];
         if (file) {
             const reader = new FileReader();
-            reader.onload = (event) => {
+            reader.onload = async (event) => {
                 const mediaData = event.target.result;
                 setBackgroundMedia(mediaData);
-                try { localStorage.setItem('fanfic_custom_bg', mediaData); } catch (err) {}
+                await saveToDB('fanfic_custom_bg', mediaData);
             };
             reader.readAsDataURL(file);
         }
     };
 
-    clearBgBtn.onclick = () => {
-        localStorage.removeItem('fanfic_custom_bg');
-        setBackgroundMedia(null);
-        themeSelect.onchange();
-    };
-
-    function applyCustomMedia() {
-        if(themeSelect.value !== 'custom') return;
-        body.style.setProperty('--header', pickers.header.value);
-        body.style.setProperty('--bg', pickers.bg.value);
-        body.style.setProperty('--user-bg', pickers.user.value);
-        body.style.setProperty('--ai-bg', pickers.ai.value);
-        body.style.setProperty('--user-text', getContrastYIQ(pickers.user.value));
-        body.style.setProperty('--ai-text', getContrastYIQ(pickers.ai.value));
-        if(!localStorage.getItem('fanfic_custom_bg')) body.style.backgroundColor = pickers.bg.value;
-    }
-
-    themeSelect.onchange = () => {
+    themeSelect.onchange = async () => {
         body.className = ''; 
         mobilePickers.style.display = (themeSelect.value === 'custom') ? 'flex' : 'none';
         ['--header', '--bg', '--user-bg', '--ai-bg', '--user-text', '--ai-text'].forEach(p => body.style.removeProperty(p));
         
         if (themeSelect.value === 'custom') {
             body.classList.add('theme-custom');
-            applyCustomMedia();
+            body.style.setProperty('--header', pickers.header.value);
+            body.style.setProperty('--bg', pickers.bg.value);
+            body.style.setProperty('--user-bg', pickers.user.value);
+            body.style.setProperty('--ai-bg', pickers.ai.value);
         } else if (themeSelect.value !== 'default') {
             body.classList.add(themeSelect.value);
         }
 
-        const savedBg = localStorage.getItem('fanfic_custom_bg');
-        if (savedBg) setBackgroundMedia(savedBg);
-        else body.style.backgroundColor = 'var(--bg)';
+        const savedBg = await getFromDB('fanfic_custom_bg');
+        setBackgroundMedia(savedBg);
     };
 
-    saveBtn.onclick = () => {
-        const config = { header: pickers.header.value, bg: pickers.bg.value, user: pickers.user.value, ai: pickers.ai.value, themeMode: themeSelect.value };
-        localStorage.setItem('fanfic_custom_colors', JSON.stringify(config));
-        saveBtn.innerText = "Saved!";
-        setTimeout(() => { saveBtn.innerText = "Save Settings"; customPanel.style.display = 'none'; }, 1000);
-    };
-
-    window.addEventListener('load', () => {
+    async function loadFromDB() {
         const savedTheme = localStorage.getItem('fanfic_custom_colors');
         if (savedTheme) {
             const config = JSON.parse(savedTheme);
@@ -248,21 +236,18 @@
             themeSelect.value = config.themeMode || 'default';
         }
         themeSelect.onchange();
-        
-        const lastContent = localStorage.getItem('last_file_content');
+
+        const lastContent = await getFromDB('last_file_content');
         if (lastContent) {
             document.getElementById('file-name-display').textContent = localStorage.getItem('last_file_name');
             dropZone.style.display = 'none';
             resetBtn.style.display = 'inline-flex';
             parseContent(lastContent);
-            setTimeout(() => { if (localStorage.getItem('fanfic_scroll_pos')) window.scrollTo(0, parseInt(localStorage.getItem('fanfic_scroll_pos'))); }, 200);
+            const scroll = localStorage.getItem('fanfic_scroll_pos');
+            if (scroll) window.scrollTo(0, parseInt(scroll));
         }
-    });
+    }
 
-    window.onscroll = () => { localStorage.setItem('fanfic_scroll_pos', window.scrollY); };
-    Object.values(pickers).forEach(p => p.oninput = applyCustomMedia);
-    toggleBtn.onclick = () => customPanel.style.display = (customPanel.style.display === 'flex') ? 'none' : 'flex';
-    
     dropZone.onclick = () => {
         const input = document.createElement('input');
         input.type = 'file'; input.accept = ".md,.txt";
@@ -270,20 +255,11 @@
         input.click();
     };
 
-    resetBtn.onclick = () => {
-        const bg = localStorage.getItem('fanfic_custom_bg');
-        const theme = localStorage.getItem('fanfic_custom_colors');
-        localStorage.clear();
-        if(bg) localStorage.setItem('fanfic_custom_bg', bg);
-        if(theme) localStorage.setItem('fanfic_custom_colors', theme);
-        location.reload();
-    };
-
-    function handleFile(file) {
+    async function handleFile(file) {
         if (!file) return;
         const reader = new FileReader();
-        reader.onload = e => {
-            localStorage.setItem('last_file_content', e.target.result);
+        reader.onload = async e => {
+            await saveToDB('last_file_content', e.target.result);
             localStorage.setItem('last_file_name', file.name);
             localStorage.setItem('fanfic_scroll_pos', 0);
             location.reload();
@@ -291,23 +267,15 @@
         reader.readAsText(file);
     }
 
-    /* ENHANCED PARSER: Fixes missing parts */
     function parseContent(text) {
         container.innerHTML = '';
-        // Splits by ## Prompt or ## Response (Case Insensitive)
         const parts = text.split(/(?=##\s*(?:Prompt|Response):?)/gi);
-        
         parts.forEach(part => {
             const isUser = /##\s*Prompt/i.test(part);
             const isAI = /##\s*Response/i.test(part);
-            
             if (isUser || isAI) {
-                // Remove the header from the content
                 let cleanContent = part.replace(/##\s*(?:Prompt|Response):?/i, '').trim();
-                
-                // Cut off at separators or footers
                 cleanContent = cleanContent.split(/---/)[0].split(/Powered by/i)[0].trim();
-                
                 if (cleanContent) {
                     const div = document.createElement('div');
                     div.className = `bubble ${isUser ? 'user' : 'ai'}`;
@@ -317,6 +285,22 @@
             }
         });
     }
+
+    saveBtn.onclick = () => {
+        const config = { header: pickers.header.value, bg: pickers.bg.value, user: pickers.user.value, ai: pickers.ai.value, themeMode: themeSelect.value };
+        localStorage.setItem('fanfic_custom_colors', JSON.stringify(config));
+        saveBtn.innerText = "Saved!";
+        setTimeout(() => { customPanel.style.display = 'none'; saveBtn.innerText = "Save Settings"; }, 1000);
+    };
+
+    document.getElementById('clear-bg').onclick = async () => {
+        await saveToDB('fanfic_custom_bg', null);
+        setBackgroundMedia(null);
+    };
+
+    resetBtn.onclick = () => { localStorage.clear(); indexedDB.deleteDatabase(dbName); location.reload(); };
+    window.onscroll = () => { localStorage.setItem('fanfic_scroll_pos', window.scrollY); };
+    toggleBtn.onclick = () => customPanel.style.display = (customPanel.style.display === 'flex') ? 'none' : 'flex';
 </script>
 </body>
 </html>
