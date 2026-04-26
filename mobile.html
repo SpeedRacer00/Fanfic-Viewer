@@ -39,7 +39,7 @@
 
 <header>
     <div style="display: flex; flex-direction: column; overflow: hidden; max-width: 45%;">
-        <span style="font-weight:bold; font-size: 1.1em; color: var(--header-text);">Fanfic Mobile</span>
+        <span id="app-title" style="font-weight:bold; font-size: 1.1em; color: var(--header-text);">Fanfic Mobile</span>
         <span id="file-name-display" style="font-size:0.7em; opacity:0.6; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"></span>
     </div>
     <div class="controls" style="display:flex; gap:6px;">
@@ -176,6 +176,12 @@
         }
         const savedBg = await getFromDB('fanfic_custom_bg');
         setBackgroundMedia(savedBg);
+
+        // HIDE OFFLINE BUTTON IF ALREADY OFFLINE
+        if (window.location.protocol === 'file:') {
+            document.getElementById('download-offline').style.display = 'none';
+            document.getElementById('app-title').innerText = "Fanfic Offline";
+        }
     }
 
     themeSelect.onchange = applyAllSettings;
@@ -235,14 +241,13 @@
             dropZone.style.display = 'none';
             resetBtn.style.display = 'inline-flex';
             parseContent(lastContent);
-            
-            // Small delay for scroll to ensure bubbles are rendered
             setTimeout(() => {
                 const scroll = localStorage.getItem('fanfic_scroll_pos');
                 if (scroll) window.scrollTo(0, parseInt(scroll));
             }, 100);
         }
     }
+
     dropZone.onclick = () => {
         const input = document.createElement('input');
         input.type = 'file'; input.accept = ".md,.txt";
@@ -255,18 +260,13 @@
         const reader = new FileReader();
         reader.onload = async e => {
             const content = e.target.result;
-            
-            // 1. Save to database
             await saveToDB('last_file_content', content);
             localStorage.setItem('last_file_name', file.name);
             localStorage.setItem('fanfic_scroll_pos', 0);
-            
-            // 2. Instead of reloading, we trigger the UI update manually
             document.getElementById('file-name-display').textContent = file.name;
             dropZone.style.display = 'none';
             resetBtn.style.display = 'inline-flex';
-            
-            parseContent(content); // This puts the bubbles on screen instantly
+            parseContent(content);
             window.scrollTo(0, 0);
         };
         reader.readAsText(file);
@@ -299,7 +299,12 @@
     };
 
     document.getElementById('clear-bg').onclick = async () => { await saveToDB('fanfic_custom_bg', null); applyAllSettings(); };
-    resetBtn.onclick = async () => { await removeFromDB('last_file_content'); localStorage.removeItem('last_file_name'); localStorage.removeItem('fanfic_scroll_pos'); location.reload(); };
+    resetBtn.onclick = async () => { 
+        await removeFromDB('last_file_content'); 
+        localStorage.removeItem('last_file_name'); 
+        localStorage.removeItem('fanfic_scroll_pos'); 
+        location.reload(); 
+    };
     window.onscroll = () => { localStorage.setItem('fanfic_scroll_pos', window.scrollY); };
     toggleBtn.onclick = () => customPanel.style.display = (customPanel.style.display === 'flex') ? 'none' : 'flex';
 </script>
