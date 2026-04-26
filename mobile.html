@@ -329,6 +329,10 @@
         await removeFromDB('last_file_content'); 
         localStorage.removeItem('last_file_name'); 
         localStorage.removeItem('fanfic_scroll_pos'); 
+        
+        // Explicitly hide the panel before reloading
+        customPanel.style.display = 'none'; 
+        
         location.reload(); 
     };
     window.onscroll = () => { localStorage.setItem('fanfic_scroll_pos', window.scrollY); };
