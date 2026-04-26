@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Fanfic Mobile - Pro</title>
+    <title>Fanfic Mobile - Travel Pro</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/4.3.0/marked.min.js"></script>
     <style>
         /* --- CORE THEMES --- */
@@ -12,74 +12,24 @@
             --user-bg: #2a475e; --user-text: #ffffff; --ai-bg: #1e2026; --ai-text: #ffffff;
             --header-text: #66c0f4; --bubble-outline: 1px solid var(--border);
         }
-        
         body.theme-discord { --bg: #313338; --header: #1e1f22; --border: #232428; --text: #dbdee1; --user-bg: #404249; --user-text: #ffffff; --ai-bg: #2b2d31; --ai-text: #dbdee1; --header-text: #fff; }
         body.theme-messenger { --bg: #000000; --header: #121212; --border: #222; --text: #fff; --user-bg: #0084ff; --user-text: #fff; --ai-bg: #242526; --ai-text: #fff; }
         body.theme-whatsapp { --bg: #0b141a; --header: #202c33; --border: #222d34; --text: #e9edef; --user-bg: #005c4b; --user-text: #ffffff; --ai-bg: #202c33; --ai-text: #e9edef; }
         body.theme-chatgpt { --bg: #212121; --header: #212121; --border: #3d3d3d; --text: #ececec; --user-bg: #2f2f2f; --user-text: #ffffff; --ai-bg: #212121; --ai-text: #ececec; }
-        
         html, body { height: 100%; margin: 0; padding: 0; overflow-x: hidden; }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            color: var(--text);
-            display: flex; flex-direction: column;
-            padding-top: 70px;
-            background-color: var(--bg); 
-            background-attachment: fixed;
-        }
-
-        #fixed-bg-layer {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            z-index: -20; background-size: cover; background-position: center;
-            background-repeat: no-repeat; pointer-events: none;
-        }
-
-        #bg-video {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            object-fit: cover; display: none; z-index: -15;
-        }
-
-        header {
-            position: fixed; top: 0; left: 0; width: 100%; height: 65px;
-            padding: 0 12px; background: var(--header);
-            display: flex; justify-content: space-between; align-items: center;
-            border-bottom: 1px solid var(--border);
-            z-index: 9999; box-sizing: border-box;
-        }
-
-        .btn-ui { 
-            background: #444; color: #fff; border: 1px solid #666; 
-            padding: 10px 14px; border-radius: 8px; font-size: 14px; 
-            text-decoration: none; display: inline-flex; align-items: center;
-            justify-content: center; box-sizing: border-box; min-height: 44px;
-        }
-
-        input[type="file"].btn-ui { width: 100%; display: block; line-height: 24px; }
-
-        #custom-panel {
-            display: none; background: var(--header); padding: 20px;
-            border-bottom: 1px solid var(--border); 
-            position: fixed; top: 65px; left: 0; width: 100%; z-index: 9998; 
-            box-sizing: border-box; flex-direction: column; gap: 15px;
-            max-height: calc(100vh - 70px); overflow-y: auto;
-        }
-
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: var(--text); display: flex; flex-direction: column; padding-top: 70px; background-color: var(--bg); background-attachment: fixed; }
+        #fixed-bg-layer { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -20; background-size: cover; background-position: center; background-repeat: no-repeat; pointer-events: none; }
+        #bg-video { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; display: none; z-index: -15; }
+        header { position: fixed; top: 0; left: 0; width: 100%; height: 65px; padding: 0 12px; background: var(--header); display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); z-index: 9999; box-sizing: border-box; }
+        .btn-ui { background: #444; color: #fff; border: 1px solid #666; padding: 10px 14px; border-radius: 8px; font-size: 14px; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; min-height: 44px; }
+        #custom-panel { display: none; background: var(--header); padding: 20px; border-bottom: 1px solid var(--border); position: fixed; top: 65px; left: 0; width: 100%; z-index: 9998; box-sizing: border-box; flex-direction: column; gap: 15px; max-height: calc(100vh - 70px); overflow-y: auto; }
         .color-row { display: flex; justify-content: space-between; align-items: center; color: white; font-size: 14px; font-weight: bold; }
         input[type="color"] { width: 60px; height: 35px; border: 1px solid #666; border-radius: 6px; background: none; padding: 0; }
-
         #chat-container { flex: 1; padding: 15px; display: flex; flex-direction: column; gap: 15px; width: 100%; box-sizing: border-box; }
-
-        .bubble {
-            max-width: 92%; padding: 14px 18px; border-radius: 22px; 
-            font-size: 16px; line-height: 1.5;
-            background-color: var(--ai-bg); color: var(--ai-text); border: var(--bubble-outline);
-            box-shadow: 0 3px 12px rgba(0,0,0,0.3);
-        }
+        .bubble { max-width: 92%; padding: 14px 18px; border-radius: 22px; font-size: 16px; line-height: 1.5; background-color: var(--ai-bg); color: var(--ai-text); border: var(--bubble-outline); box-shadow: 0 3px 12px rgba(0,0,0,0.3); }
         .user { align-self: flex-end; background-color: var(--user-bg); color: var(--user-text); border-bottom-right-radius: 4px; border: none !important; }
         .ai { align-self: flex-start; border-bottom-left-radius: 4px; }
         .label { font-size: 0.75em; text-transform: uppercase; margin-bottom: 6px; display: block; font-weight: 800; opacity: 0.6; }
-        
         #drop-zone { border: 2px dashed #66c0f4; padding: 70px 20px; text-align: center; margin: 20px; border-radius: 18px; background: rgba(0,0,0,0.5); color: #66c0f4; font-weight: bold; }
     </style>
 </head>
@@ -93,7 +43,6 @@
         <span id="file-name-display" style="font-size:0.7em; opacity:0.6; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"></span>
     </div>
     <div class="controls" style="display:flex; gap:6px;">
-        <a href="index.html" class="btn-ui">💻 PC</a>
         <button id="toggle-custom" class="btn-ui">⚙️</button>
         <button id="reset-page" class="btn-ui" style="display:none;">New</button>
     </div>
@@ -119,6 +68,7 @@
     <input type="file" id="bgUpload" accept="image/*,video/mp4" class="btn-ui">
     <button id="clear-bg" class="btn-ui">Clear Background</button>
     <button id="save-theme" class="btn-ui" style="background:#28a745; border:none; font-weight:bold;">Save Settings</button>
+    <button id="download-offline" class="btn-ui" style="background:#66c0f4; color:#000; font-weight:bold; border:none;">✈️ Prepare Offline Version</button>
 </div>
 
 <div id="drop-zone">Tap to upload your fanfic</div>
@@ -129,7 +79,6 @@
     const storeName = "files";
     let db;
 
-    // --- DB Setup ---
     const request = indexedDB.open(dbName, 1);
     request.onupgradeneeded = (e) => {
         db = e.target.result;
@@ -158,7 +107,6 @@
         tx.objectStore(storeName).delete(key);
     }
 
-    // --- DOM Elements ---
     const themeSelect = document.getElementById('theme-select');
     const customPanel = document.getElementById('custom-panel');
     const mobilePickers = document.getElementById('mobile-pickers');
@@ -179,7 +127,6 @@
         ai: document.getElementById('aiColor')
     };
 
-    // --- Core UI Logic ---
     function getContrastYIQ(hexcolor){
         hexcolor = hexcolor.replace("#", "");
         if(hexcolor.length === 3) hexcolor = hexcolor.split('').map(s => s+s).join('');
@@ -212,14 +159,10 @@
         }
     }
 
-    // New unified function to update everything at once
     async function applyAllSettings() {
         body.className = ''; 
         mobilePickers.style.display = (themeSelect.value === 'custom') ? 'flex' : 'none';
-        
-        // Reset properties
         ['--header', '--bg', '--user-bg', '--ai-bg', '--user-text', '--ai-text'].forEach(p => body.style.removeProperty(p));
-        
         if (themeSelect.value === 'custom') {
             body.classList.add('theme-custom');
             body.style.setProperty('--header', pickers.header.value);
@@ -231,12 +174,10 @@
         } else if (themeSelect.value !== 'default') {
             body.classList.add(themeSelect.value);
         }
-
         const savedBg = await getFromDB('fanfic_custom_bg');
         setBackgroundMedia(savedBg);
     }
 
-    // Listeners for instant updates
     themeSelect.onchange = applyAllSettings;
     Object.values(pickers).forEach(p => p.oninput = applyAllSettings);
 
@@ -253,19 +194,33 @@
         }
     };
 
-    document.getElementById('clear-bg').onclick = async () => {
-        await saveToDB('fanfic_custom_bg', null);
-        applyAllSettings();
+    document.getElementById('download-offline').onclick = async () => {
+        const btn = document.getElementById('download-offline');
+        btn.innerText = "Bundling...";
+        try {
+            const response = await fetch('https://cdnjs.cloudflare.com/ajax/libs/marked/4.3.0/marked.min.js');
+            const libraryCode = await response.text();
+            let htmlContent = document.documentElement.outerHTML;
+            const scriptTag = `<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/4.3.0/marked.min.js"><\/script>`;
+            const bundledScript = `<script>${libraryCode}<\/script>`;
+            htmlContent = htmlContent.replace(scriptTag, bundledScript);
+            const blob = new Blob([htmlContent], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'Fanfic_Offline_Reader.html';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            btn.innerText = "Ready for Flight! ✈️";
+            setTimeout(() => { btn.innerText = "✈️ Prepare Offline Version"; }, 3000);
+        } catch (err) {
+            alert("Need Wi-Fi to bundle!");
+            btn.innerText = "Error: Need Wi-Fi";
+        }
     };
 
-    saveBtn.onclick = () => {
-        const config = { header: pickers.header.value, bg: pickers.bg.value, user: pickers.user.value, ai: pickers.ai.value, themeMode: themeSelect.value };
-        localStorage.setItem('fanfic_custom_colors', JSON.stringify(config));
-        saveBtn.innerText = "Saved!";
-        setTimeout(() => { customPanel.style.display = 'none'; saveBtn.innerText = "Save Settings"; }, 1000);
-    };
-
-    // --- Loading & Parsing ---
     async function loadFromDB() {
         const savedTheme = localStorage.getItem('fanfic_custom_colors');
         if (savedTheme) {
@@ -274,7 +229,6 @@
             themeSelect.value = config.themeMode || 'default';
         }
         await applyAllSettings();
-
         const lastContent = await getFromDB('last_file_content');
         if (lastContent) {
             document.getElementById('file-name-display').textContent = localStorage.getItem('last_file_name');
@@ -324,13 +278,15 @@
         });
     }
 
-    resetBtn.onclick = async () => {
-        await removeFromDB('last_file_content');
-        localStorage.removeItem('last_file_name');
-        localStorage.removeItem('fanfic_scroll_pos');
-        location.reload();
+    saveBtn.onclick = () => {
+        const config = { header: pickers.header.value, bg: pickers.bg.value, user: pickers.user.value, ai: pickers.ai.value, themeMode: themeSelect.value };
+        localStorage.setItem('fanfic_custom_colors', JSON.stringify(config));
+        saveBtn.innerText = "Saved!";
+        setTimeout(() => { customPanel.style.display = 'none'; saveBtn.innerText = "Save Settings"; }, 1000);
     };
 
+    document.getElementById('clear-bg').onclick = async () => { await saveToDB('fanfic_custom_bg', null); applyAllSettings(); };
+    resetBtn.onclick = async () => { await removeFromDB('last_file_content'); localStorage.removeItem('last_file_name'); localStorage.removeItem('fanfic_scroll_pos'); location.reload(); };
     window.onscroll = () => { localStorage.setItem('fanfic_scroll_pos', window.scrollY); };
     toggleBtn.onclick = () => customPanel.style.display = (customPanel.style.display === 'flex') ? 'none' : 'flex';
 </script>
