@@ -213,13 +213,18 @@
             // 2. Create a "Virtual Copy" of the current document to clean it up
             let offlineDoc = document.documentElement.cloneNode(true);
             
-            // 3. Find the button and info text INSIDE the copy and hide/reset them
+            // 3. Find the button and title INSIDE the copy and hide/reset them
             const offlineBtn = offlineDoc.querySelector('#download-offline');
             if (offlineBtn) {
-                offlineBtn.style.display = 'none'; // Hide it in the saved file
-                offlineBtn.innerText = originalText; // Reset text in case it's ever shown
+                offlineBtn.style.display = 'none'; 
+                offlineBtn.innerText = originalText;
             }
 
+            // ADD THIS LINE TO CHANGE THE TITLE IN THE OFFLINE FILE:
+            const offlineTitle = offlineDoc.querySelector('#app-title');
+            if (offlineTitle) {
+                offlineTitle.innerText = "Fanfic Mobile - Offline";
+            }
             // 4. Get the HTML string from our cleaned-up virtual copy
             let htmlContent = offlineDoc.outerHTML;
 
