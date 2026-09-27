@@ -35,7 +35,6 @@
             overflow-y: auto;
             position: relative;
             background-color: var(--bg);
-            scroll-behavior: smooth;
         }
 
         #fixed-bg-layer {
@@ -127,6 +126,11 @@
 <div id="chat-container"></div>
 
 <script>
+    // Force manual scroll restoration to prevent browser defaults overriding IndexedDB
+    if ('scrollRestoration' in history) {
+        history.scrollRestoration = 'manual';
+    }
+
     // --- INDEXED DB STORAGE ENGINE ---
     const dbName = "FanficViewerDB";
     function openDB() {
@@ -286,7 +290,9 @@
         setTimeout(() => saveBtn.innerText = "Save", 1500);
     };
 
-    window.addEventListener('load', async () => {
+    let isParsingDone = false;
+
+    async function initApp() {
         const savedBg = await dbGet('fanfic_custom_bg');
         if (savedBg) setBackgroundMedia(savedBg);
 
@@ -304,32 +310,48 @@
             dropZone.style.display = 'none';
             resetBtn.style.display = 'block';
 
-            // 1. Render all bubbles
+            // Parse document content
             parseContent(lastContent);
+            isParsingDone = true;
 
-            // 2. Wait for DOM layout to render before setting scroll position
-            requestAnimationFrame(() => {
-                setTimeout(async () => {
-                    const savedScroll = await dbGet('fanfic_scroll_pos');
-                    if (savedScroll !== null && savedScroll !== undefined) {
-                        document.documentElement.scrollTop = parseInt(savedScroll);
-                        document.body.scrollTop = parseInt(savedScroll);
-                        window.scrollTo(0, parseInt(savedScroll));
-                    }
-                }, 100);
-            });
+            // Trigger scroll position restore after DOM render cycles complete
+            restoreScrollPosition();
         }
-    });
+    }
 
-    // --- CONTINUOUS SCROLL POSITION SAVING ---
+    async function restoreScrollPosition() {
+        const savedScroll = await dbGet('fanfic_scroll_pos');
+        if (savedScroll !== null && savedScroll !== undefined) {
+            const targetPos = parseInt(savedScroll);
+            
+            // Multiple attempts to ensure the layout has fully expanded before scrolling
+            const scrollToTarget = () => {
+                window.scrollTo({ top: targetPos, behavior: 'instant' });
+                document.documentElement.scrollTop = targetPos;
+                document.body.scrollTop = targetPos;
+            };
+
+            scrollToTarget();
+            setTimeout(scrollToTarget, 50);
+            setTimeout(scrollToTarget, 300);
+            setTimeout(scrollToTarget, 600);
+        }
+    }
+
+    window.addEventListener('DOMContentLoaded', initApp);
+
+    // Continuous Scroll Tracking
     let scrollTimeout;
-    window.onscroll = () => {
+    window.addEventListener('scroll', () => {
+        if (!isParsingDone) return; // Prevents overwriting scroll position to 0 while loading
         clearTimeout(scrollTimeout);
         scrollTimeout = setTimeout(async () => {
             const pos = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop;
-            await dbSet('fanfic_scroll_pos', pos);
-        }, 200);
-    };
+            if (pos > 0) {
+                await dbSet('fanfic_scroll_pos', pos);
+            }
+        }, 150);
+    }, { passive: true });
 
     Object.values(pickers).forEach(p => p.oninput = applyCustomMedia);
     toggleBtn.onclick = () => customPanel.style.display = (customPanel.style.display === 'flex') ? 'none' : 'flex';
@@ -377,6 +399,7 @@
             resetBtn.style.display = 'block';
             document.getElementById('file-name-display').textContent = `— ${file.name}`;
             parseContent(textContent);
+            isParsingDone = true;
         };
         reader.readAsText(file);
     }
