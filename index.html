@@ -328,16 +328,24 @@ window.addEventListener('drop', e => e.preventDefault());
     };
 
     function handleFile(file) {
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = e => {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+        try {
             localStorage.setItem('last_file_content', e.target.result);
             localStorage.setItem('last_file_name', file.name);
             localStorage.setItem('fanfic_scroll_pos', 0);
-            location.reload();
-        };
-        reader.readAsText(file);
-    }
+        } catch (err) {
+            console.warn("localStorage restricted, rendering directly:", err);
+        }
+        // Always parse and render the content even if localStorage fails
+        dropZone.style.display = 'none';
+        resetBtn.style.display = 'block';
+        document.getElementById('file-name-display').textContent = `— ${file.name}`;
+        parseContent(e.target.result);
+    };
+    reader.readAsText(file);
+}
 
     function parseContent(text) {
     container.innerHTML = '';
