@@ -34,17 +34,15 @@
             padding-top: 60px;
             overflow-y: auto;
             position: relative;
-            /* Default fallback */
             background-color: var(--bg);
             scroll-behavior: smooth;
         }
 
-        /* Fixed Background Layer - This now handles solid colors too */
         #fixed-bg-layer {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             z-index: -10; pointer-events: none;
             background-size: cover; background-position: center; background-repeat: no-repeat;
-            background-color: var(--bg); /* Keeps color solid even when scrolling */
+            background-color: var(--bg);
         }
 
         #bg-video {
@@ -129,6 +127,45 @@
 <div id="chat-container"></div>
 
 <script>
+    // --- INDEXED DB STORAGE ENGINE ---
+    const dbName = "FanficViewerDB";
+    function openDB() {
+        return new Promise((resolve, reject) => {
+            const req = indexedDB.open(dbName, 1);
+            req.onupgradeneeded = e => e.target.result.createObjectStore("store");
+            req.onsuccess = e => resolve(e.target.result);
+            req.onerror = e => reject(e);
+        });
+    }
+
+    async function dbSet(key, val) {
+        try {
+            const db = await openDB();
+            const tx = db.transaction("store", "readwrite");
+            tx.objectStore("store").put(val, key);
+        } catch(e) { console.warn("DB Write error:", e); }
+    }
+
+    async function dbGet(key) {
+        try {
+            const db = await openDB();
+            return new Promise(resolve => {
+                const req = db.transaction("store").objectStore("store").get(key);
+                req.onsuccess = () => resolve(req.result);
+                req.onerror = () => resolve(null);
+            });
+        } catch(e) { return null; }
+    }
+
+    async function dbClear() {
+        try {
+            const db = await openDB();
+            const tx = db.transaction("store", "readwrite");
+            tx.objectStore("store").clear();
+        } catch(e) {}
+    }
+
+    // --- UI CONTROLS ---
     const themeSelect = document.getElementById('theme-select');
     const customPanel = document.getElementById('custom-panel');
     const toggleBtn = document.getElementById('toggle-custom');
@@ -165,7 +202,6 @@
             bgVideo.style.display = 'none';
             bgVideo.pause();
             bgVideo.src = "";
-            // Ensure the fixed layer still shows the theme color if no media
             fixedBg.style.backgroundColor = 'var(--bg)';
             return;
         }
@@ -184,7 +220,6 @@
             bgVideo.src = "";
             fixedBg.style.backgroundImage = `url(${data})`;
         }
-        // When media is active, we don't want the solid color overlaying it
         fixedBg.style.backgroundColor = isVideo ? 'transparent' : 'var(--bg)';
     }
 
@@ -192,23 +227,18 @@
         const file = e.target.files[0];
         if (file) {
             const reader = new FileReader();
-            reader.onload = (event) => {
+            reader.onload = async (event) => {
                 const mediaData = event.target.result;
                 setBackgroundMedia(mediaData);
-                try {
-                    localStorage.setItem('fanfic_custom_bg', mediaData);
-                } catch (err) {
-                    alert("⚠️ File too large to save! It will work for this session only.");
-                    localStorage.removeItem('fanfic_custom_bg');
-                }
+                await dbSet('fanfic_custom_bg', mediaData);
             };
             reader.readAsDataURL(file);
         }
     };
 
-    clearBgBtn.onclick = () => {
+    clearBgBtn.onclick = async () => {
         setBackgroundMedia(null);
-        localStorage.removeItem('fanfic_custom_bg');
+        await dbSet('fanfic_custom_bg', null);
         bgUpload.value = "";
     };
 
@@ -226,12 +256,10 @@
         body.style.setProperty('--ai-bg', pickers.ai.value);
         body.style.setProperty('--user-text', getContrastYIQ(pickers.user.value));
         body.style.setProperty('--ai-text', getContrastYIQ(pickers.ai.value));
-        
-        // Force the fixed layer to update its solid color immediately
         fixedBg.style.backgroundColor = pickers.bg.value;
     }
 
-    themeSelect.onchange = () => {
+    themeSelect.onchange = async () => {
         body.className = ''; 
         ['--header', '--bg', '--user-bg', '--ai-bg', '--user-text', '--ai-text'].forEach(p => body.style.removeProperty(p));
         
@@ -242,44 +270,43 @@
         } else {
             customPanel.style.display = 'none';
             if (themeSelect.value !== 'default') body.classList.add(themeSelect.value);
-            // Update fixed background color based on theme root variables
             fixedBg.style.backgroundColor = 'var(--bg)';
         }
-        setBackgroundMedia(localStorage.getItem('fanfic_custom_bg'));
+        const savedBg = await dbGet('fanfic_custom_bg');
+        setBackgroundMedia(savedBg);
     };
 
-    saveBtn.onclick = () => {
+    saveBtn.onclick = async () => {
         const config = {
             header: pickers.header.value, bg: pickers.bg.value,
             user: pickers.user.value, ai: pickers.ai.value, themeMode: themeSelect.value
         };
-        localStorage.setItem('fanfic_custom_colors', JSON.stringify(config));
+        await dbSet('fanfic_custom_colors', config);
         saveBtn.innerText = "Saved!";
         setTimeout(() => saveBtn.innerText = "Save", 1500);
     };
 
-    window.addEventListener('load', () => {
-        const savedBg = localStorage.getItem('fanfic_custom_bg');
-        if (savedBg) {
-            setTimeout(() => setBackgroundMedia(savedBg), 50);
-        }
+    window.addEventListener('load', async () => {
+        const savedBg = await dbGet('fanfic_custom_bg');
+        if (savedBg) setBackgroundMedia(savedBg);
 
-        const savedTheme = localStorage.getItem('fanfic_custom_colors');
+        const savedTheme = await dbGet('fanfic_custom_colors');
         if (savedTheme) {
-            const config = JSON.parse(savedTheme);
-            Object.keys(pickers).forEach(key => { if(config[key]) pickers[key].value = config[key]; });
-            themeSelect.value = config.themeMode || 'default';
+            Object.keys(pickers).forEach(key => { if(savedTheme[key]) pickers[key].value = savedTheme[key]; });
+            themeSelect.value = savedTheme.themeMode || 'default';
         }
         themeSelect.onchange();
 
-        const lastContent = localStorage.getItem('last_file_content');
+        const lastContent = await dbGet('last_file_content');
         if (lastContent) {
-            document.getElementById('file-name-display').textContent = `— ${localStorage.getItem('last_file_name')}`;
+            const fileName = await dbGet('last_file_name');
+            document.getElementById('file-name-display').textContent = `— ${fileName || 'Saved Story'}`;
             dropZone.style.display = 'none';
             resetBtn.style.display = 'block';
             parseContent(lastContent);
-            setTimeout(() => {
-                const savedScroll = localStorage.getItem('fanfic_scroll_pos');
+            
+            setTimeout(async () => {
+                const savedScroll = await dbGet('fanfic_scroll_pos');
                 if (savedScroll) body.scrollTop = parseInt(savedScroll);
             }, 200);
         }
@@ -288,8 +315,8 @@
     let scrollTimeout;
     body.onscroll = () => {
         clearTimeout(scrollTimeout);
-        scrollTimeout = setTimeout(() => {
-            localStorage.setItem('fanfic_scroll_pos', body.scrollTop);
+        scrollTimeout = setTimeout(async () => {
+            await dbSet('fanfic_scroll_pos', body.scrollTop);
         }, 250);
     };
 
@@ -297,84 +324,81 @@
     toggleBtn.onclick = () => customPanel.style.display = (customPanel.style.display === 'flex') ? 'none' : 'flex';
     
     // Click to upload
-dropZone.onclick = () => {
-    const input = document.createElement('input');
-    input.type = 'file'; 
-    input.accept = ".md,.markdown,.txt,text/plain";
-    input.onchange = e => handleFile(e.target.files[0]);
-    input.click();
-};
+    dropZone.onclick = () => {
+        const input = document.createElement('input');
+        input.type = 'file'; 
+        input.accept = ".md,.markdown,.txt,text/plain";
+        input.onchange = e => handleFile(e.target.files[0]);
+        input.click();
+    };
 
-// Drag and drop support
-dropZone.ondragover = e => e.preventDefault();
-dropZone.ondrop = e => {
-    e.preventDefault();
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-        handleFile(e.dataTransfer.files[0]);
-    }
-};
+    // Drag and drop support
+    dropZone.ondragover = e => e.preventDefault();
+    dropZone.ondrop = e => {
+        e.preventDefault();
+        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+            handleFile(e.dataTransfer.files[0]);
+        }
+    };
 
-// Prevent Opera GX / Chrome from opening dropped files in a new tab page-wide
-window.addEventListener('dragover', e => e.preventDefault());
-window.addEventListener('drop', e => e.preventDefault());
+    window.addEventListener('dragover', e => e.preventDefault());
+    window.addEventListener('drop', e => e.preventDefault());
 
-    resetBtn.onclick = () => {
-        const bg = localStorage.getItem('fanfic_custom_bg');
-        const theme = localStorage.getItem('fanfic_custom_colors');
-        localStorage.clear();
-        if(bg) localStorage.setItem('fanfic_custom_bg', bg);
-        if(theme) localStorage.setItem('fanfic_custom_colors', theme);
+    resetBtn.onclick = async () => {
+        const bg = await dbGet('fanfic_custom_bg');
+        const theme = await dbGet('fanfic_custom_colors');
+        await dbClear();
+        if(bg) await dbSet('fanfic_custom_bg', bg);
+        if(theme) await dbSet('fanfic_custom_colors', theme);
         location.reload();
     };
 
     function handleFile(file) {
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = e => {
-        try {
-            localStorage.setItem('last_file_content', e.target.result);
-            localStorage.setItem('last_file_name', file.name);
-            localStorage.setItem('fanfic_scroll_pos', 0);
-        } catch (err) {
-            console.warn("localStorage restricted, rendering directly:", err);
-        }
-        // Always parse and render the content even if localStorage fails
-        dropZone.style.display = 'none';
-        resetBtn.style.display = 'block';
-        document.getElementById('file-name-display').textContent = `— ${file.name}`;
-        parseContent(e.target.result);
-    };
-    reader.readAsText(file);
-}
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = async e => {
+            const textContent = e.target.result;
+            await dbSet('last_file_content', textContent);
+            await dbSet('last_file_name', file.name);
+            await dbSet('fanfic_scroll_pos', 0);
+
+            dropZone.style.display = 'none';
+            resetBtn.style.display = 'block';
+            document.getElementById('file-name-display').textContent = `— ${file.name}`;
+            parseContent(textContent);
+        };
+        reader.readAsText(file);
+    }
 
     function parseContent(text) {
-    container.innerHTML = '';
-    
-    // Split using a unified capturing group
-    const parts = text.split(/(?:\*\*|##\s*)(You|Gemini|User|Model|Assistant|Prompt|Response):?\*?\*/gi);
-    
-    for (let i = 1; i < parts.length; i += 2) {
-        const type = (parts[i] || "").toLowerCase();
-        let rawContent = parts[i + 1] || "";
-
-        // Remove trailing '---' divider and clean up
-        let content = rawContent.replace(/\n---\s*$/, '').split('Powered by')[0].trim();
+        container.innerHTML = '';
         
-        if (content) {
-            const isUser = (type === 'you' || type === 'user' || type === 'prompt');
+        // Remove top markdown heading line if present (# Gemini Chat / # Title)
+        const cleanedText = text.replace(/^#\s+.*?\n/i, '');
+        
+        // Split using a unified capturing group
+        const parts = cleanedText.split(/(?:\*\*|##\s*)(You|Gemini|User|Model|Assistant|Prompt|Response):?\*?\*/gi);
+        
+        for (let i = 1; i < parts.length; i += 2) {
+            const type = (parts[i] || "").toLowerCase();
+            let rawContent = parts[i + 1] || "";
 
-            // Strip leading '>' quotes from user prompts
-            if (isUser) {
-                content = content.replace(/^>\s?/gm, '');
+            let content = rawContent.replace(/\n---\s*$/, '').split('Powered by')[0].trim();
+            
+            if (content) {
+                const isUser = (type === 'you' || type === 'user' || type === 'prompt');
+
+                if (isUser) {
+                    content = content.replace(/^>\s?/gm, '');
+                }
+
+                const div = document.createElement('div');
+                div.className = `bubble ${isUser ? 'user' : 'ai'}`;
+                div.innerHTML = `<span class="label">${isUser ? 'User' : 'Gemini'}</span><div>${marked.parse(content)}</div>`;
+                container.appendChild(div);
             }
-
-            const div = document.createElement('div');
-            div.className = `bubble ${isUser ? 'user' : 'ai'}`;
-            div.innerHTML = `<span class="label">${isUser ? 'User' : 'Gemini'}</span><div>${marked.parse(content)}</div>`;
-            container.appendChild(div);
         }
     }
-}
 </script>
 </body>
 </html>
