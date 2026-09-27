@@ -314,6 +314,10 @@ dropZone.ondrop = e => {
     }
 };
 
+// Prevent Opera GX / Chrome from opening dropped files in a new tab page-wide
+window.addEventListener('dragover', e => e.preventDefault());
+window.addEventListener('drop', e => e.preventDefault());
+
     resetBtn.onclick = () => {
         const bg = localStorage.getItem('fanfic_custom_bg');
         const theme = localStorage.getItem('fanfic_custom_colors');
