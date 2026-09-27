@@ -325,20 +325,33 @@
     }
 
     function parseContent(text) {
-        container.innerHTML = '';
-        const parts = text.split(/##\s*(Prompt|Response):?/gi);
-        for (let i = 1; i < parts.length; i += 2) {
-            const type = parts[i].toLowerCase();
-            let content = (parts[i + 1] || "").split('---')[0].split('Powered by')[0].trim();
-            if (content) {
-                const isUser = (type === 'prompt');
-                const div = document.createElement('div');
-                div.className = `bubble ${isUser ? 'user' : 'ai'}`;
-                div.innerHTML = `<span class="label">${isUser ? 'User' : 'ChatGPT'}</span><div>${marked.parse(content)}</div>`;
-                container.appendChild(div);
+    container.innerHTML = '';
+    
+    // Split using a unified capturing group
+    const parts = text.split(/(?:\*\*|##\s*)(You|Gemini|User|Model|Assistant|Prompt|Response):?\*?\*/gi);
+    
+    for (let i = 1; i < parts.length; i += 2) {
+        const type = (parts[i] || "").toLowerCase();
+        let rawContent = parts[i + 1] || "";
+
+        // Remove trailing '---' divider and clean up
+        let content = rawContent.replace(/\n---\s*$/, '').split('Powered by')[0].trim();
+        
+        if (content) {
+            const isUser = (type === 'you' || type === 'user' || type === 'prompt');
+
+            // Strip leading '>' quotes from user prompts
+            if (isUser) {
+                content = content.replace(/^>\s?/gm, '');
             }
+
+            const div = document.createElement('div');
+            div.className = `bubble ${isUser ? 'user' : 'ai'}`;
+            div.innerHTML = `<span class="label">${isUser ? 'User' : 'Gemini'}</span><div>${marked.parse(content)}</div>`;
+            container.appendChild(div);
         }
     }
+}
 </script>
 </body>
 </html>
