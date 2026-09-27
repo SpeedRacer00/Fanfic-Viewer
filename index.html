@@ -296,12 +296,23 @@
     Object.values(pickers).forEach(p => p.oninput = applyCustomMedia);
     toggleBtn.onclick = () => customPanel.style.display = (customPanel.style.display === 'flex') ? 'none' : 'flex';
     
-    dropZone.onclick = () => {
-        const input = document.createElement('input');
-        input.type = 'file'; input.accept = ".md,.txt";
-        input.onchange = e => handleFile(e.target.files[0]);
-        input.click();
-    };
+    // Click to upload
+dropZone.onclick = () => {
+    const input = document.createElement('input');
+    input.type = 'file'; 
+    input.accept = ".md,.markdown,.txt,text/plain";
+    input.onchange = e => handleFile(e.target.files[0]);
+    input.click();
+};
+
+// Drag and drop support
+dropZone.ondragover = e => e.preventDefault();
+dropZone.ondrop = e => {
+    e.preventDefault();
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+        handleFile(e.dataTransfer.files[0]);
+    }
+};
 
     resetBtn.onclick = () => {
         const bg = localStorage.getItem('fanfic_custom_bg');
