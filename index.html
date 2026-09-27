@@ -287,38 +287,39 @@
     };
 
     window.addEventListener('load', async () => {
-        const savedBg = await dbGet('fanfic_custom_bg');
-        if (savedBg) setBackgroundMedia(savedBg);
+    const savedBg = await dbGet('fanfic_custom_bg');
+    if (savedBg) setBackgroundMedia(savedBg);
 
-        const savedTheme = await dbGet('fanfic_custom_colors');
-        if (savedTheme) {
-            Object.keys(pickers).forEach(key => { if(savedTheme[key]) pickers[key].value = savedTheme[key]; });
-            themeSelect.value = savedTheme.themeMode || 'default';
-        }
-        themeSelect.onchange();
+    const savedTheme = await dbGet('fanfic_custom_colors');
+    if (savedTheme) {
+        Object.keys(pickers).forEach(key => { if(savedTheme[key]) pickers[key].value = savedTheme[key]; });
+        themeSelect.value = savedTheme.themeMode || 'default';
+    }
+    themeSelect.onchange();
 
-        const lastContent = await dbGet('last_file_content');
-        if (lastContent) {
-            const fileName = await dbGet('last_file_name');
-            document.getElementById('file-name-display').textContent = `— ${fileName || 'Saved Story'}`;
-            dropZone.style.display = 'none';
-            resetBtn.style.display = 'block';
-            parseContent(lastContent);
-            
+    const lastContent = await dbGet('last_file_content');
+    if (lastContent) {
+        const fileName = await dbGet('last_file_name');
+        document.getElementById('file-name-display').textContent = `— ${fileName || 'Saved Story'}`;
+        dropZone.style.display = 'none';
+        resetBtn.style.display = 'block';
+
+        // 1. Render all bubbles
+        parseContent(lastContent);
+
+        // 2. Wait for DOM layout to render before setting scroll position
+        requestAnimationFrame(() => {
             setTimeout(async () => {
                 const savedScroll = await dbGet('fanfic_scroll_pos');
-                if (savedScroll) body.scrollTop = parseInt(savedScroll);
-            }, 200);
-        }
-    });
-
-    let scrollTimeout;
-    body.onscroll = () => {
-        clearTimeout(scrollTimeout);
-        scrollTimeout = setTimeout(async () => {
-            await dbSet('fanfic_scroll_pos', body.scrollTop);
-        }, 250);
-    };
+                if (savedScroll !== null && savedScroll !== undefined) {
+                    document.documentElement.scrollTop = parseInt(savedScroll);
+                    document.body.scrollTop = parseInt(savedScroll);
+                    window.scrollTo(0, parseInt(savedScroll));
+                }
+            }, 100);
+        });
+    }
+});
 
     Object.values(pickers).forEach(p => p.oninput = applyCustomMedia);
     toggleBtn.onclick = () => customPanel.style.display = (customPanel.style.display === 'flex') ? 'none' : 'flex';
